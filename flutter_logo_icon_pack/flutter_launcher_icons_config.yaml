@@ -1,0 +1,13 @@
+# Optional helper config for flutter_launcher_icons.
+# Copy this into pubspec.yaml under flutter_launcher_icons, or merge manually.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/logo/master_logo_1024.png
+  web:
+    generate: true
+    image_path: assets/logo/master_logo_1024.png
+  windows:
+    generate: true
+    image_path: assets/logo/master_logo_1024.png
+    icon_size: 256
