@@ -66,10 +66,12 @@ class CquScheduleImportParser extends ScheduleImportParser {
     final items = <ImportPreviewItem>[];
     const validator = ImportValidator();
     const conflicts = ConflictDetector();
+    final weekdayColumns = _detectWeekdayColumns(rows);
 
     for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
       final row = rows[rowIndex];
-      for (var columnIndex = 1; columnIndex <= 7; columnIndex++) {
+      for (final column in weekdayColumns.entries) {
+        final columnIndex = column.key;
         if (columnIndex >= row.length) {
           continue;
         }
@@ -77,15 +79,20 @@ class CquScheduleImportParser extends ScheduleImportParser {
         if (cellText.isEmpty || !cellText.contains('周')) {
           continue;
         }
-        final weekday = columnIndex;
+        if (_isHeaderLine(cellText)) {
+          continue;
+        }
         for (final line in _courseLines(cellText)) {
+          if (_isHeaderLine(line)) {
+            continue;
+          }
           final draft = _parseCourseLine(
             line: line,
             semesterId: semester.id,
-            weekday: weekday,
+            weekday: column.value,
           );
           if (draft == null) {
-            warnings.add('第 ${rowIndex + 1} 行第 ${columnIndex + 1} 列未解析：$line');
+            warnings.add(_warning(rowIndex, columnIndex, line));
             continue;
           }
           final validation = validator.validate(draft);
@@ -110,6 +117,52 @@ class CquScheduleImportParser extends ScheduleImportParser {
     return ImportParseResult(items: items, warnings: warnings);
   }
 
+  Map<int, int> _detectWeekdayColumns(List<List<String>> rows) {
+    final detected = <int, int>{};
+    for (final row in rows.take(12)) {
+      for (var columnIndex = 0; columnIndex < row.length; columnIndex++) {
+        final weekday = _weekdayFromText(row[columnIndex]);
+        if (weekday != null) {
+          detected[columnIndex] = weekday;
+        }
+      }
+      if (detected.length >= 5) {
+        return detected;
+      }
+    }
+    return {for (var weekday = 1; weekday <= 7; weekday++) weekday: weekday};
+  }
+
+  int? _weekdayFromText(String value) {
+    final compact = value.replaceAll(RegExp(r'\s+'), '');
+    const patterns = <int, List<String>>{
+      1: ['周一', '星期一', 'Monday'],
+      2: ['周二', '星期二', 'Tuesday'],
+      3: ['周三', '星期三', 'Wednesday'],
+      4: ['周四', '星期四', 'Thursday'],
+      5: ['周五', '星期五', 'Friday'],
+      6: ['周六', '星期六', 'Saturday'],
+      7: ['周日', '星期日', '星期天', 'Sunday'],
+    };
+    for (final entry in patterns.entries) {
+      if (entry.value.any(compact.contains)) {
+        return entry.key;
+      }
+    }
+    return null;
+  }
+
+  bool _isHeaderLine(String value) {
+    final compact = value.trim().replaceAll(RegExp(r'\s+'), '');
+    if (compact.isEmpty) {
+      return true;
+    }
+    if (_weekdayFromText(compact) != null && compact.length <= 8) {
+      return true;
+    }
+    return compact == '节次' || compact == '课程' || compact == '时间';
+  }
+
   Iterable<String> _courseLines(String cellText) {
     return cellText
         .replaceAll('\r\n', '\n')
@@ -124,9 +177,15 @@ class CquScheduleImportParser extends ScheduleImportParser {
     required int semesterId,
     required int weekday,
   }) {
+    final normalized = line
+        .replaceAll('【', '[')
+        .replaceAll('】', ']')
+        .replaceAll('（', '(')
+        .replaceAll('）', ')')
+        .trim();
     final match = RegExp(
       r'^(.+?)\s*(\[[^\]]*周\])\s*(\[[^\]]+\])\s*(.*)$',
-    ).firstMatch(line);
+    ).firstMatch(normalized);
     if (match == null) {
       return null;
     }
@@ -135,20 +194,36 @@ class CquScheduleImportParser extends ScheduleImportParser {
     final weekExpression = match.group(2)!.trim();
     final sectionExpression = match.group(3)!.trim();
     final classroom = match.group(4)!.trim();
-    final sections = SectionExpressionParser.parse(sectionExpression);
-    final weeks = WeekExpressionParser.parse(weekExpression);
+    try {
+      final sections = SectionExpressionParser.parse(sectionExpression);
+      final weeks = WeekExpressionParser.parse(weekExpression);
+      return CourseDraft(
+        semesterId: semesterId,
+        name: name,
+        classroom: classroom.isEmpty ? null : classroom,
+        weekday: weekday,
+        startSection: sections.start,
+        endSection: sections.end,
+        weekExpression: weekExpression,
+        parsedWeeks: weeks,
+        source: ImportSourceType.excel.name,
+      );
+    } on FormatException {
+      return null;
+    }
+  }
 
-    return CourseDraft(
-      semesterId: semesterId,
-      name: name,
-      classroom: classroom.isEmpty ? null : classroom,
-      weekday: weekday,
-      startSection: sections.start,
-      endSection: sections.end,
-      weekExpression: weekExpression,
-      parsedWeeks: weeks,
-      source: ImportSourceType.excel.name,
-    );
+  String _warning(int rowIndex, int columnIndex, String line) {
+    final category = _looksLikeWholeWeek(line) ? '整周/实践/集中周课程暂未自动入库' : '未解析';
+    return '第 ${rowIndex + 1} 行第 ${columnIndex + 1} 列$category：$line';
+  }
+
+  bool _looksLikeWholeWeek(String line) {
+    return line.contains('整周') ||
+        line.contains('实践') ||
+        line.contains('集中') ||
+        line.contains('实习') ||
+        !line.contains('节');
   }
 
   String _cellText(Data? cell) {

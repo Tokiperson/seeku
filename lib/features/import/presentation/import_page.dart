@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -136,6 +135,10 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   }
 
   Future<void> _pickExcel(BuildContext context) async {
+    if (kIsWeb) {
+      _showMessage('当前 Web 预览版仅支持 Windows/Android 导入');
+      return;
+    }
     final semester = await ref.read(currentSemesterProvider.future);
     if (semester == null) {
       _showMessage('请先创建学期');
@@ -160,7 +163,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       final session = await ref
           .read(importRepositoryProvider)
           .createExcelPreview(
-            file: File(path),
+            path: path,
             saveSnapshot: saveSnapshot,
             semester: semester,
             existingEntries: existingEntries,

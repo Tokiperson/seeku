@@ -16,6 +16,7 @@ class SeekUColors {
   static const warningSoft = Color(0xFFFFF8E5);
   static const warningBorder = Color(0xFFFFD978);
   static const danger = Color(0xFFD64545);
+  static const nowLine = Color(0xFFFFA8B8);
 }
 
 ThemeData buildSeekUTheme() {

@@ -106,3 +106,17 @@ class SelectedWeekController extends Notifier<int> {
 final selectedWeekProvider = NotifierProvider<SelectedWeekController, int>(
   SelectedWeekController.new,
 );
+
+class SelectedWeekdayController extends Notifier<int> {
+  @override
+  int build() => DateTime.now().weekday;
+
+  void setWeekday(int weekday) {
+    state = weekday.clamp(1, 7);
+  }
+}
+
+final selectedWeekdayProvider =
+    NotifierProvider<SelectedWeekdayController, int>(
+      SelectedWeekdayController.new,
+    );
