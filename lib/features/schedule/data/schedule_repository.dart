@@ -23,6 +23,16 @@ class ScheduleRepository {
     return _database.getCurrentSemester();
   }
 
+  Future<int> createSemester(Semester semester) async {
+    await bootstrap();
+    return _database.insertSemester(semester);
+  }
+
+  Future<void> updateSemester(Semester semester) async {
+    await bootstrap();
+    return _database.updateSemester(semester);
+  }
+
   Future<void> setCurrentSemester(int semesterId) =>
       _database.setCurrentSemester(semesterId);
 
@@ -54,3 +64,4 @@ class ScheduleRepository {
     );
   }
 }
+

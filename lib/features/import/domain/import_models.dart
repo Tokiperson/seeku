@@ -46,6 +46,16 @@ class ImportBatch {
   final DateTime importedAt;
   final String? rawSnapshotPath;
   final String status;
+
+  ImportBatch copyWith({String? status}) {
+    return ImportBatch(
+      id: id,
+      sourceType: sourceType,
+      importedAt: importedAt,
+      rawSnapshotPath: rawSnapshotPath,
+      status: status ?? this.status,
+    );
+  }
 }
 
 class CourseDraft {
@@ -107,6 +117,9 @@ class ImportValidator {
     if (draft.startSection <= 0 || draft.endSection < draft.startSection) {
       errors.add('节次范围不合法');
     }
+    if (draft.endSection > 13) {
+      errors.add('节次不能超过第 13 节');
+    }
     if (draft.parsedWeeks.isEmpty) {
       errors.add('周次不能为空');
     }
@@ -119,6 +132,56 @@ class ScheduleConflict {
 
   final CourseEntry existingEntry;
   final CourseDraft draft;
+}
+
+class ImportPreviewItem {
+  const ImportPreviewItem({
+    required this.draft,
+    required this.validation,
+    required this.conflicts,
+    required this.selected,
+  });
+
+  final CourseDraft draft;
+  final ImportValidationResult validation;
+  final List<ScheduleConflict> conflicts;
+  final bool selected;
+
+  bool get canImport => validation.isValid;
+  bool get hasConflicts => conflicts.isNotEmpty;
+
+  ImportPreviewItem copyWith({bool? selected}) {
+    return ImportPreviewItem(
+      draft: draft,
+      validation: validation,
+      conflicts: conflicts,
+      selected: selected ?? this.selected,
+    );
+  }
+}
+
+class ImportParseResult {
+  const ImportParseResult({required this.items, required this.warnings});
+
+  final List<ImportPreviewItem> items;
+  final List<String> warnings;
+}
+
+class ImportPreviewSession {
+  const ImportPreviewSession({required this.batch, required this.result});
+
+  final ImportBatch batch;
+  final ImportParseResult result;
+}
+
+abstract class ScheduleImportParser {
+  const ScheduleImportParser();
+
+  Future<ImportParseResult> parse({
+    required String path,
+    required Semester semester,
+    required Iterable<CourseEntry> existingEntries,
+  });
 }
 
 class ConflictDetector {

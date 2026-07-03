@@ -160,6 +160,28 @@ class SeekuDatabase extends GeneratedDatabase {
     return _lastInsertId();
   }
 
+  Future<void> updateSemester(Semester semester) async {
+    await ensureInitialized();
+    if (semester.isCurrent) {
+      await customStatement('UPDATE semesters SET is_current = 0');
+    }
+    await customStatement(
+      '''
+      UPDATE semesters
+      SET name = ?, academic_year = ?, term_index = ?, starts_on = ?, is_current = ?
+      WHERE id = ?
+      ''',
+      [
+        semester.name,
+        semester.academicYear,
+        semester.termIndex,
+        semester.startsOn.toIso8601String(),
+        semester.isCurrent ? 1 : 0,
+        semester.id,
+      ],
+    );
+  }
+
   Future<void> setCurrentSemester(int semesterId) async {
     await ensureInitialized();
     await customStatement('UPDATE semesters SET is_current = 0');
@@ -359,6 +381,14 @@ class SeekuDatabase extends GeneratedDatabase {
     return _lastInsertId();
   }
 
+  Future<void> updateImportBatchStatus(int batchId, String status) async {
+    await ensureInitialized();
+    await customStatement('UPDATE import_batches SET status = ? WHERE id = ?', [
+      status,
+      batchId,
+    ]);
+  }
+
   Future<List<ImportBatch>> getImportBatches() async {
     await ensureInitialized();
     final rows = await customSelect(
@@ -533,3 +563,4 @@ const defaultCquTimeSlots = <TimeSlot>[
     profileName: 'CQU 默认',
   ),
 ];
+

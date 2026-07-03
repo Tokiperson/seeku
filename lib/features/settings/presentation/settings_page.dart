@@ -29,7 +29,7 @@ class SettingsPage extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              width: 360,
+              width: 380,
               child: Column(
                 children: [
                   Card(
@@ -53,12 +53,33 @@ class SettingsPage extends ConsumerWidget {
                                 Icons.school_outlined,
                                 color: SeekUColors.cquBlue,
                               ),
-                              title: const Text('默认学期'),
+                              title: const Text('当前学期'),
                               subtitle: Text(semester?.name ?? '尚未创建学期'),
+                              trailing: IconButton(
+                                tooltip: semester == null ? '新增学期' : '编辑学期',
+                                icon: Icon(
+                                  semester == null
+                                      ? Icons.add_circle_outline
+                                      : Icons.edit_outlined,
+                                ),
+                                onPressed: () =>
+                                    _editSemester(context, ref, semester),
+                              ),
                             ),
                             loading: () => const LinearProgressIndicator(),
                             error: (error, stackTrace) => Text('学期加载失败：$error'),
                           ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () =>
+                                  _editSemester(context, ref, null),
+                              icon: const Icon(Icons.add_outlined),
+                              label: const Text('新增学期'),
+                            ),
+                          ),
+                          const Divider(height: 28),
                           snapshotAsync.when(
                             data: (enabled) => SwitchListTile(
                               contentPadding: EdgeInsets.zero,
@@ -87,7 +108,7 @@ class SettingsPage extends ConsumerWidget {
                               color: SeekUColors.cquBlue,
                             ),
                             title: Text('外观'),
-                            subtitle: Text('CQU 蓝白 · 跟随系统'),
+                            subtitle: Text('CQU 蓝白 · 桌面端平滑显示'),
                           ),
                         ],
                       ),
@@ -112,7 +133,7 @@ class SettingsPage extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text('alpha 内置默认时间，可按实际校历手动修正。'),
+                      const Text('beta 内置默认时间，可按实际校历手动修正。'),
                       const SizedBox(height: 16),
                       Expanded(
                         child: timeSlotsAsync.when(
@@ -156,6 +177,100 @@ class SettingsPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _editSemester(
+    BuildContext context,
+    WidgetRef ref,
+    Semester? semester,
+  ) async {
+    final nameController = TextEditingController(text: semester?.name ?? '');
+    final yearController = TextEditingController(
+      text: semester?.academicYear ?? '2025-2026',
+    );
+    final termController = TextEditingController(
+      text: (semester?.termIndex ?? 2).toString(),
+    );
+    final startController = TextEditingController(
+      text: _formatDate(semester?.startsOn ?? DateTime.now()),
+    );
+    final result = await showDialog<Semester>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(semester == null ? '新增学期' : '编辑学期'),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: '学期名称'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: yearController,
+                decoration: const InputDecoration(labelText: '学年，例如 2025-2026'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: termController,
+                decoration: const InputDecoration(labelText: '学期序号，例如 1 或 2'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: startController,
+                decoration: const InputDecoration(labelText: '开学日期 yyyy-mm-dd'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final parsedDate = DateTime.tryParse(startController.text.trim());
+              final termIndex = int.tryParse(termController.text.trim());
+              if (nameController.text.trim().isEmpty ||
+                  parsedDate == null ||
+                  termIndex == null) {
+                return;
+              }
+              Navigator.of(context).pop(
+                Semester(
+                  id: semester?.id ?? 0,
+                  name: nameController.text.trim(),
+                  academicYear: yearController.text.trim(),
+                  termIndex: termIndex,
+                  startsOn: parsedDate,
+                  isCurrent: true,
+                ),
+              );
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    nameController.dispose();
+    yearController.dispose();
+    termController.dispose();
+    startController.dispose();
+    if (result == null) {
+      return;
+    }
+    if (semester == null) {
+      await ref.read(scheduleRepositoryProvider).createSemester(result);
+    } else {
+      await ref.read(scheduleRepositoryProvider).updateSemester(result);
+    }
+    ref.invalidate(semestersProvider);
+    ref.invalidate(currentSemesterProvider);
+    ref.invalidate(currentSemesterEntriesProvider);
   }
 
   Future<void> _editSlot(
@@ -207,5 +322,10 @@ class SettingsPage extends ConsumerWidget {
     }
     await ref.read(scheduleRepositoryProvider).updateTimeSlot(result);
     ref.invalidate(timeSlotsProvider);
+  }
+
+  String _formatDate(DateTime value) {
+    String two(int input) => input.toString().padLeft(2, '0');
+    return '${value.year}-${two(value.month)}-${two(value.day)}';
   }
 }
