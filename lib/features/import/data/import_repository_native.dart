@@ -4,6 +4,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../../core/database/seeku_database.dart';
+import '../../ai/data/ai_api_manager.dart';
+import '../../ai/domain/ai_models.dart';
 import '../../excel_import/data/schedule_import_parser.dart';
 import '../../schedule/domain/schedule_models.dart';
 import '../domain/import_models.dart';
@@ -12,31 +14,22 @@ class ImportRepository {
   const ImportRepository(
     this._database, {
     ScheduleImportParser parser = const CquScheduleImportParser(),
-  }) : _parser = parser;
+    AiApiManager aiApiManager = const DefaultAiApiManager(),
+  }) : _parser = parser,
+       _aiApiManager = aiApiManager;
 
   final SeekuDatabase _database;
   final ScheduleImportParser _parser;
+  final AiApiManager _aiApiManager;
 
   Future<ImportBatch> createExcelBatch({
     required String path,
     required bool saveSnapshot,
-  }) async {
-    await _database.ensureInitialized();
-    final importedAt = DateTime.now();
-    final file = File(path);
-    final snapshotPath = saveSnapshot ? await _copySnapshot(file) : null;
-    final batchId = await _database.insertImportBatch(
-      sourceType: ImportSourceType.excel.name,
-      importedAt: importedAt,
-      rawSnapshotPath: snapshotPath,
-      status: ImportBatchStatus.waitingForSample.name,
-    );
-    return ImportBatch(
-      id: batchId,
-      sourceType: ImportSourceType.excel.name,
-      importedAt: importedAt,
-      rawSnapshotPath: snapshotPath,
-      status: ImportBatchStatus.waitingForSample.name,
+  }) {
+    return _createBatch(
+      path: path,
+      saveSnapshot: saveSnapshot,
+      sourceType: ImportSourceType.excel,
     );
   }
 
@@ -56,14 +49,39 @@ class ImportRepository {
         semester: semester,
         existingEntries: existingEntries,
       );
+      return await _markPreviewReady(batch: batch, result: result);
+    } on Object {
       await _database.updateImportBatchStatus(
         batch.id,
-        ImportBatchStatus.previewReady.name,
+        ImportBatchStatus.failed.name,
       );
-      return ImportPreviewSession(
-        batch: batch.copyWith(status: ImportBatchStatus.previewReady.name),
-        result: result,
+      rethrow;
+    }
+  }
+
+  Future<ImportPreviewSession> createAiPreview({
+    required String path,
+    required bool saveSnapshot,
+    required AiScheduleSourceType sourceType,
+    required Semester semester,
+    required Iterable<CourseEntry> existingEntries,
+  }) async {
+    final importSourceType = switch (sourceType) {
+      AiScheduleSourceType.pdf => ImportSourceType.aiPdf,
+      AiScheduleSourceType.image => ImportSourceType.aiImage,
+    };
+    final batch = await _createBatch(
+      path: path,
+      saveSnapshot: saveSnapshot,
+      sourceType: importSourceType,
+    );
+    try {
+      final result = await _aiApiManager.parseScheduleImport(
+        request: AiScheduleParseRequest(path: path, sourceType: sourceType),
+        semester: semester,
+        existingEntries: existingEntries,
       );
+      return await _markPreviewReady(batch: batch, result: result);
     } on Object {
       await _database.updateImportBatchStatus(
         batch.id,
@@ -94,6 +112,44 @@ class ImportRepository {
   }
 
   Future<List<ImportBatch>> getImportBatches() => _database.getImportBatches();
+
+  Future<ImportBatch> _createBatch({
+    required String path,
+    required bool saveSnapshot,
+    required ImportSourceType sourceType,
+  }) async {
+    await _database.ensureInitialized();
+    final importedAt = DateTime.now();
+    final file = File(path);
+    final snapshotPath = saveSnapshot ? await _copySnapshot(file) : null;
+    final batchId = await _database.insertImportBatch(
+      sourceType: sourceType.name,
+      importedAt: importedAt,
+      rawSnapshotPath: snapshotPath,
+      status: ImportBatchStatus.waitingForSample.name,
+    );
+    return ImportBatch(
+      id: batchId,
+      sourceType: sourceType.name,
+      importedAt: importedAt,
+      rawSnapshotPath: snapshotPath,
+      status: ImportBatchStatus.waitingForSample.name,
+    );
+  }
+
+  Future<ImportPreviewSession> _markPreviewReady({
+    required ImportBatch batch,
+    required ImportParseResult result,
+  }) async {
+    await _database.updateImportBatchStatus(
+      batch.id,
+      ImportBatchStatus.previewReady.name,
+    );
+    return ImportPreviewSession(
+      batch: batch.copyWith(status: ImportBatchStatus.previewReady.name),
+      result: result,
+    );
+  }
 
   Future<String> _copySnapshot(File file) async {
     final supportDir = await getApplicationSupportDirectory();

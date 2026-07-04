@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../ai/presentation/ai_core_status_button.dart';
 import '../domain/schedule_grid_models.dart';
 import 'schedule_grid_view.dart';
 
@@ -54,6 +55,7 @@ class _AndroidScheduleContent extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      floatingActionButton: const AiCoreStatusButton(),
       body: SafeArea(
         child: Column(
           children: [

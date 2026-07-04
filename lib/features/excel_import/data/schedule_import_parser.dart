@@ -197,10 +197,12 @@ class CquScheduleImportParser extends ScheduleImportParser {
     try {
       final sections = SectionExpressionParser.parse(sectionExpression);
       final weeks = WeekExpressionParser.parse(weekExpression);
+      final normalizedClassroom = classroom.isEmpty ? null : classroom;
       return CourseDraft(
         semesterId: semesterId,
         name: name,
-        classroom: classroom.isEmpty ? null : classroom,
+        classroom: normalizedClassroom,
+        campus: CampusInference.fromClassroom(normalizedClassroom),
         weekday: weekday,
         startSection: sections.start,
         endSection: sections.end,

@@ -26,6 +26,10 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      if (find.text('稍后').evaluate().isNotEmpty) {
+        await tester.tap(find.text('稍后'));
+        await tester.pumpAndSettle();
+      }
 
       expect(find.text('当前课程'), findsOneWidget);
       expect(find.text('课表'), findsOneWidget);

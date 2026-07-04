@@ -1,6 +1,6 @@
 import '../../schedule/domain/schedule_models.dart';
 
-enum ImportSourceType { excel, teachingWeb, manual }
+enum ImportSourceType { excel, aiPdf, aiImage, teachingWeb, manual }
 
 enum ImportBatchStatus { waitingForSample, previewReady, imported, failed }
 
@@ -90,6 +90,24 @@ class CourseDraft {
   final String weekExpression;
   final List<int> parsedWeeks;
   final String source;
+}
+
+class CampusInference {
+  const CampusInference._();
+
+  static String? fromClassroom(String? classroom) {
+    final normalized = classroom?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      return null;
+    }
+    final firstCodeUnit = normalized.codeUnitAt(0);
+    final isUppercase = firstCodeUnit >= 65 && firstCodeUnit <= 90;
+    final isLowercase = firstCodeUnit >= 97 && firstCodeUnit <= 122;
+    if (!isUppercase && !isLowercase) {
+      return null;
+    }
+    return String.fromCharCode(firstCodeUnit).toUpperCase();
+  }
 }
 
 class ImportValidationResult {

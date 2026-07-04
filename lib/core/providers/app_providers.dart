@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../features/ai/data/ai_core_service.dart';
+import '../../features/ai/domain/ai_core_models.dart';
 import '../../features/import/data/import_repository.dart';
 import '../../features/import/domain/import_models.dart';
 import '../../features/schedule/data/schedule_repository.dart';
@@ -69,6 +71,34 @@ final importSnapshotEnabledProvider = FutureProvider<bool>((ref) async {
   final settings = await ref.watch(settingsRepositoryProvider.future);
   return settings.saveImportSnapshots;
 });
+
+final aiApiKeyConfiguredProvider = FutureProvider<bool>((ref) async {
+  final settings = await ref.watch(settingsRepositoryProvider.future);
+  return settings.hasAiApiKey;
+});
+
+final aiCoreServiceProvider = Provider<AiCoreService>((ref) {
+  return const AiCoreService();
+});
+
+class AiCoreController extends Notifier<AiCoreSnapshot> {
+  @override
+  AiCoreSnapshot build() => const AiCoreSnapshot.unknown();
+
+  Future<AiCoreSnapshot> checkCore() async {
+    state = const AiCoreSnapshot(
+      status: AiCoreStatus.checking,
+      message: '正在检测AI核心...',
+    );
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    final snapshot = await ref.read(aiCoreServiceProvider).check(settings);
+    state = snapshot;
+    return snapshot;
+  }
+}
+
+final aiCoreControllerProvider =
+    NotifierProvider<AiCoreController, AiCoreSnapshot>(AiCoreController.new);
 
 enum ScheduleViewMode { week, day }
 

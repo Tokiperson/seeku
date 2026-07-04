@@ -1,4 +1,5 @@
 import '../../../core/database/seeku_database.dart';
+import '../../ai/domain/ai_models.dart';
 import '../../schedule/domain/schedule_models.dart';
 import '../domain/import_models.dart';
 
@@ -21,6 +22,16 @@ class ImportRepository {
     required Iterable<CourseEntry> existingEntries,
   }) {
     throw UnsupportedError('当前 Web 预览版仅支持 Windows/Android 导入');
+  }
+
+  Future<ImportPreviewSession> createAiPreview({
+    required String path,
+    required bool saveSnapshot,
+    required AiScheduleSourceType sourceType,
+    required Semester semester,
+    required Iterable<CourseEntry> existingEntries,
+  }) {
+    throw UnsupportedError('当前 Web 预览版仅支持 Windows/Android AI 导入');
   }
 
   Future<int> confirmImport({

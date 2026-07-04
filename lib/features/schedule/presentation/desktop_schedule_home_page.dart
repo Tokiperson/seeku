@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../ai/presentation/ai_core_status_button.dart';
 import '../domain/schedule_grid_models.dart';
 import '../domain/schedule_models.dart';
 import 'schedule_grid_view.dart';
@@ -54,6 +55,8 @@ class _DesktopScheduleContent extends ConsumerWidget {
     final selectedWeek = ref.watch(selectedWeekProvider);
 
     return Scaffold(
+      floatingActionButton: const AiCoreStatusButton(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: Row(
         children: [
           NavigationRail(

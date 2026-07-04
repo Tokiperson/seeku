@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seeku/features/excel_import/data/schedule_import_parser.dart';
+import 'package:seeku/features/import/domain/import_models.dart';
 import 'package:seeku/features/schedule/domain/schedule_models.dart';
 
 void main() {
@@ -15,7 +16,7 @@ void main() {
         [
           '说明,节次,周一,周二,周三,周四,周五,周六,周日',
           '上午,1-2,,高等数学 [1-16周] [1-2节] D1201,,,,,',
-          '上午,3-4,,"大学英语 [1-8周] [3-4节] D2201\n整周实践 [17-18周]",,,,,',
+          '上午,3-4,,"大学英语 [1-8周] [3-4节] a5201\n整周实践 [17-18周]",,,,,',
         ].join('\n'),
       );
       const parser = CquScheduleImportParser();
@@ -35,8 +36,20 @@ void main() {
       expect(result.items, hasLength(2));
       expect(result.items.first.draft.weekday, 2);
       expect(result.items.first.draft.name, '高等数学');
+      expect(result.items.first.draft.campus, 'D');
+      expect(result.items[1].draft.classroom, 'a5201');
+      expect(result.items[1].draft.campus, 'A');
       expect(result.warnings.single, contains('第 3 行第 4 列'));
       expect(result.warnings.single, contains('整周/实践/集中周课程暂未自动入库'));
     },
   );
+
+  test('CampusInference only uses the first trimmed classroom character', () {
+    expect(CampusInference.fromClassroom('D1344'), 'D');
+    expect(CampusInference.fromClassroom('a5201'), 'A');
+    expect(CampusInference.fromClassroom(' 虎溪 D123'), isNull);
+    expect(CampusInference.fromClassroom('1234'), isNull);
+    expect(CampusInference.fromClassroom(''), isNull);
+    expect(CampusInference.fromClassroom(null), isNull);
+  });
 }

@@ -30,6 +30,7 @@ void main() {
       expect(first.endSection, 2);
       expect(first.parsedWeeks, [1, 2, 3, 4, 6, 7, 8, 9, 11, 12]);
       expect(first.classroom, 'D1344');
+      expect(first.campus, 'D');
 
       final longSection = result.items
           .map((item) => item.draft)
