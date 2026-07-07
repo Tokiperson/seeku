@@ -35,7 +35,7 @@ ThemeData buildSeekUTheme({
     displayColor: SeekUColors.text,
     fontFamily: 'Microsoft YaHei UI',
   );
-  final textTheme = baseTextTheme.apply(fontSizeFactor: fontScale);
+  final textTheme = _scaleTextTheme(baseTextTheme, fontScale);
 
   return ThemeData(
     useMaterial3: true,
@@ -127,4 +127,36 @@ ThemeData buildSeekUTheme({
       ),
     ),
   );
+}
+
+TextTheme _scaleTextTheme(TextTheme textTheme, double scale) {
+  if (scale == 1) {
+    return textTheme;
+  }
+
+  return textTheme.copyWith(
+    displayLarge: _scaleTextStyle(textTheme.displayLarge, scale),
+    displayMedium: _scaleTextStyle(textTheme.displayMedium, scale),
+    displaySmall: _scaleTextStyle(textTheme.displaySmall, scale),
+    headlineLarge: _scaleTextStyle(textTheme.headlineLarge, scale),
+    headlineMedium: _scaleTextStyle(textTheme.headlineMedium, scale),
+    headlineSmall: _scaleTextStyle(textTheme.headlineSmall, scale),
+    titleLarge: _scaleTextStyle(textTheme.titleLarge, scale),
+    titleMedium: _scaleTextStyle(textTheme.titleMedium, scale),
+    titleSmall: _scaleTextStyle(textTheme.titleSmall, scale),
+    bodyLarge: _scaleTextStyle(textTheme.bodyLarge, scale),
+    bodyMedium: _scaleTextStyle(textTheme.bodyMedium, scale),
+    bodySmall: _scaleTextStyle(textTheme.bodySmall, scale),
+    labelLarge: _scaleTextStyle(textTheme.labelLarge, scale),
+    labelMedium: _scaleTextStyle(textTheme.labelMedium, scale),
+    labelSmall: _scaleTextStyle(textTheme.labelSmall, scale),
+  );
+}
+
+TextStyle? _scaleTextStyle(TextStyle? style, double scale) {
+  final fontSize = style?.fontSize;
+  if (style == null || fontSize == null) {
+    return style;
+  }
+  return style.copyWith(fontSize: fontSize * scale);
 }

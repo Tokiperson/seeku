@@ -2,7 +2,7 @@ name: seeku
 description: "SeekU: a Windows-first CQU schedule assistant built with Flutter."
 publish_to: 'none'
 
-version: 0.1.0-snapshot.3+3
+version: 0.1.0-rc.1+5
 
 environment:
   sdk: ">=3.8.0 <4.0.0"
@@ -37,6 +37,7 @@ flutter:
     - windows/runner/resources/app_icon.ico
     - docs/ABOUT.md
     - docs/CONTACT.md
+    - docs/User_Agreement.md
     - LICENSE
 
 hooks:

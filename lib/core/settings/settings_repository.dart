@@ -12,6 +12,7 @@ class SettingsRepository {
   static const _languageKey = 'appearance.language';
   static const _aiApiKey = 'ai.api_key';
   static const _aiFirstOpenedAtKey = 'ai.first_opened_at';
+  static const _userAgreementAcceptedKey = 'legal.user_agreement.accepted';
   static const _visibleSectionCountKey = 'schedule.visible_section_count';
   static const _showOffWeekCoursesKey = 'schedule.show_off_week_courses';
   static const _courseColorOverridesKey = 'schedule.course_color_overrides';
@@ -133,6 +134,12 @@ class SettingsRepository {
   }
 
   Future<void> clearAiApiKey() => _preferences.remove(_aiApiKey);
+
+  bool get userAgreementAccepted =>
+      _preferences.getBool(_userAgreementAcceptedKey) ?? false;
+
+  Future<void> acceptUserAgreement() =>
+      _preferences.setBool(_userAgreementAcceptedKey, true);
 
   DateTime? get aiFirstOpenedAt {
     final value = _preferences.getString(_aiFirstOpenedAtKey);

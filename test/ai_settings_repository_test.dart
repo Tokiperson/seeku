@@ -68,4 +68,14 @@ void main() {
       expect(settings.courseColorOverrides.containsKey('数据结构'), isFalse);
     },
   );
+
+  test('SettingsRepository stores user agreement acceptance', () async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final settings = SettingsRepository(preferences);
+
+    expect(settings.userAgreementAccepted, isFalse);
+    await settings.acceptUserAgreement();
+    expect(settings.userAgreementAccepted, isTrue);
+  });
 }

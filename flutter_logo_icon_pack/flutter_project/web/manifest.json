@@ -1,11 +1,11 @@
 {
-  "name": "App",
-  "short_name": "App",
+  "name": "seeku",
+  "short_name": "seeku",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#FFFFFF",
-  "theme_color": "#FFFFFF",
-  "description": "Flutter app",
+  "background_color": "transparent",
+  "theme_color": "#0055B8",
+  "description": "Transparent logo icon set generated from the supplied master logo.",
   "orientation": "portrait-primary",
   "prefer_related_applications": false,
   "icons": [

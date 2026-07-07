@@ -34,5 +34,11 @@ void main() {
 
     expect(find.text(SeekUBuildInfo.displayVersion), findsOneWidget);
     expect(find.text('关于SeekU'), findsOneWidget);
+    expect(find.text('用户协议'), findsOneWidget);
+
+    await tester.tap(find.text('用户协议'));
+    await tester.pumpAndSettle();
+    expect(find.text('SeekU 用户协议'), findsWidgets);
+    expect(find.textContaining('请您务必审慎阅读'), findsWidgets);
   });
 }

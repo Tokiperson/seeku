@@ -806,9 +806,8 @@ class _AboutView extends StatelessWidget {
             _AboutTile(
               title: '用户协议',
               icon: Icons.article_outlined,
-              assetPath: 'docs/ABOUT.md',
+              assetPath: 'docs/User_Agreement.md',
               format: _DocumentFormat.markdown,
-              initialHeading: '当前限制',
             ),
             _AboutTile(
               title: '联系我们',
@@ -837,14 +836,12 @@ class _AboutTile extends StatelessWidget {
     required this.icon,
     required this.assetPath,
     required this.format,
-    this.initialHeading,
   });
 
   final String title;
   final IconData icon;
   final String assetPath;
   final _DocumentFormat format;
-  final String? initialHeading;
 
   @override
   Widget build(BuildContext context) {
@@ -858,7 +855,6 @@ class _AboutTile extends StatelessWidget {
             title: title,
             assetPath: assetPath,
             format: format,
-            initialHeading: initialHeading,
           ),
         ),
       ),
@@ -871,13 +867,11 @@ class _DocumentReaderPage extends StatelessWidget {
     required this.title,
     required this.assetPath,
     required this.format,
-    this.initialHeading,
   });
 
   final String title;
   final String assetPath;
   final _DocumentFormat format;
-  final String? initialHeading;
 
   @override
   Widget build(BuildContext context) {
@@ -892,7 +886,7 @@ class _DocumentReaderPage extends StatelessWidget {
           if (snapshot.hasError) {
             return Center(child: Text('文档加载失败：${snapshot.error}'));
           }
-          final data = _normalizeDocument(snapshot.data ?? '');
+          final data = snapshot.data ?? '';
           return Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 900),
@@ -951,19 +945,6 @@ class _DocumentReaderPage extends StatelessWidget {
         },
       ),
     );
-  }
-
-  String _normalizeDocument(String value) {
-    final heading = initialHeading;
-    if (heading == null || heading.isEmpty) {
-      return value;
-    }
-    final marker = '## $heading';
-    final index = value.indexOf(marker);
-    if (index < 0) {
-      return value;
-    }
-    return '# $title\n\n${value.substring(index)}';
   }
 }
 

@@ -1,13 +1,18 @@
-# Optional helper config for flutter_launcher_icons.
-# Copy this into pubspec.yaml under flutter_launcher_icons, or merge manually.
+# Transparent Flutter launcher icon config
+# Source image generated from master_logo_original_1254.png with transparent background.
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/logo/master_logo_1024.png
+  image_path: "master_logo_1024.png"
+  adaptive_icon_foreground: "master_logo_1024.png"
+  adaptive_icon_background: "#00000000"
+  remove_alpha_ios: false
   web:
     generate: true
-    image_path: assets/logo/master_logo_1024.png
+    image_path: "master_logo_1024.png"
+    background_color: "transparent"
+    theme_color: "#0055B8"
   windows:
     generate: true
-    image_path: assets/logo/master_logo_1024.png
+    image_path: "master_logo_1024.png"
     icon_size: 256
