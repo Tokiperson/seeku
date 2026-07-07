@@ -54,4 +54,22 @@ trash/
 log/
 AIUsage/
 SAMPLE.md
+# SeekU release and installer artifacts
+/dist/
+/installer/Output/
+/installer/output/
+*.iss.tmp
+*.pfx
+*.p12
+
+# Local runtime data that must not be published
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.sqlite-journal
+*.sqlite3-journal
+docs/dire.txt
+docs/APIKEY_Hashing.txt
+docs/UI_req.md
 
