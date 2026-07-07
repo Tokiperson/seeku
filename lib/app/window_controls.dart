@@ -4,6 +4,7 @@ import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'theme.dart';
+import 'tray_icon_path_stub.dart' if (dart.library.io) 'tray_icon_path_io.dart';
 
 bool get seekuSupportsDesktopWindowControls {
   if (kIsWeb) {
@@ -37,7 +38,8 @@ Future<void> configureSeekUDesktopWindow() async {
   });
 
   if (_supportsWindowsTray) {
-    await trayManager.setIcon('windows/runner/resources/app_icon.ico');
+    await trayManager.setIcon(await resolveTrayIconPath());
+    await trayManager.setToolTip('SeekU');
     await trayManager.setContextMenu(
       Menu(
         items: [

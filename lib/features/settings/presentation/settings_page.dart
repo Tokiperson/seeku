@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 
 import '../../../app/build_info.dart';
 import '../../../app/theme.dart';
@@ -774,16 +776,18 @@ class _AboutView extends StatelessWidget {
         child: ListView(
           shrinkWrap: true,
           padding: const EdgeInsets.all(24),
-          children: [
+          children: const [
             Center(
-              child: Image.asset(
-                'flutter_logo_icon_pack/master_logo_1024.png',
+              child: Image(
+                image: AssetImage(
+                  'flutter_logo_icon_pack/master_logo_1024.png',
+                ),
                 width: 132,
                 height: 132,
               ),
             ),
-            const SizedBox(height: 16),
-            const Center(
+            SizedBox(height: 16),
+            Center(
               child: Text(
                 SeekUBuildInfo.displayVersion,
                 style: TextStyle(
@@ -792,11 +796,32 @@ class _AboutView extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-            _AboutTile(title: '关于SeekU', body: 'SeekU 是面向重庆大学课表管理的本地优先应用。'),
-            _AboutTile(title: '用户协议', body: '用户协议内容将在后续版本补充。'),
-            _AboutTile(title: '联系我们', body: '可通过项目仓库或维护者提供的联系方式反馈问题。'),
-            _AboutTile(title: '开源协议', body: '本项目遵循仓库 LICENSE 文件中的开源协议。'),
+            SizedBox(height: 24),
+            _AboutTile(
+              title: '关于SeekU',
+              icon: Icons.info_outline,
+              assetPath: 'docs/ABOUT.md',
+              format: _DocumentFormat.markdown,
+            ),
+            _AboutTile(
+              title: '用户协议',
+              icon: Icons.article_outlined,
+              assetPath: 'docs/ABOUT.md',
+              format: _DocumentFormat.markdown,
+              initialHeading: '当前限制',
+            ),
+            _AboutTile(
+              title: '联系我们',
+              icon: Icons.mail_outline,
+              assetPath: 'docs/CONTACT.md',
+              format: _DocumentFormat.markdown,
+            ),
+            _AboutTile(
+              title: '开源协议',
+              icon: Icons.balance_outlined,
+              assetPath: 'LICENSE',
+              format: _DocumentFormat.plainText,
+            ),
           ],
         ),
       ),
@@ -804,32 +829,141 @@ class _AboutView extends StatelessWidget {
   }
 }
 
+enum _DocumentFormat { markdown, plainText }
+
 class _AboutTile extends StatelessWidget {
-  const _AboutTile({required this.title, required this.body});
+  const _AboutTile({
+    required this.title,
+    required this.icon,
+    required this.assetPath,
+    required this.format,
+    this.initialHeading,
+  });
 
   final String title;
-  final String body;
+  final IconData icon;
+  final String assetPath;
+  final _DocumentFormat format;
+  final String? initialHeading;
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: const Icon(Icons.info_outline),
+      leading: Icon(icon),
       title: Text(title),
       trailing: const Icon(Icons.chevron_right),
-      onTap: () => showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(title),
-          content: Text(body),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('确定'),
-            ),
-          ],
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => _DocumentReaderPage(
+            title: title,
+            assetPath: assetPath,
+            format: format,
+            initialHeading: initialHeading,
+          ),
         ),
       ),
     );
+  }
+}
+
+class _DocumentReaderPage extends StatelessWidget {
+  const _DocumentReaderPage({
+    required this.title,
+    required this.assetPath,
+    required this.format,
+    this.initialHeading,
+  });
+
+  final String title;
+  final String assetPath;
+  final _DocumentFormat format;
+  final String? initialHeading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: FutureBuilder<String>(
+        future: rootBundle.loadString(assetPath),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('文档加载失败：${snapshot.error}'));
+          }
+          final data = _normalizeDocument(snapshot.data ?? '');
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: format == _DocumentFormat.markdown
+                  ? Markdown(
+                      data: data,
+                      selectable: true,
+                      padding: const EdgeInsets.all(28),
+                      styleSheet:
+                          MarkdownStyleSheet.fromTheme(
+                            Theme.of(context),
+                          ).copyWith(
+                            h1: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              color: SeekUColors.text,
+                            ),
+                            h2: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: SeekUColors.text,
+                            ),
+                            p: const TextStyle(
+                              fontSize: 14,
+                              height: 1.65,
+                              color: SeekUColors.text,
+                            ),
+                            blockquoteDecoration: BoxDecoration(
+                              color: SeekUColors.sky,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: SeekUColors.border),
+                            ),
+                            codeblockDecoration: BoxDecoration(
+                              color: SeekUColors.surface,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: SeekUColors.border),
+                            ),
+                          ),
+                    )
+                  : Scrollbar(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(28),
+                        child: SelectableText(
+                          data,
+                          style: const TextStyle(
+                            fontFamily: 'Consolas',
+                            fontSize: 13,
+                            height: 1.45,
+                            color: SeekUColors.text,
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _normalizeDocument(String value) {
+    final heading = initialHeading;
+    if (heading == null || heading.isEmpty) {
+      return value;
+    }
+    final marker = '## $heading';
+    final index = value.indexOf(marker);
+    if (index < 0) {
+      return value;
+    }
+    return '# $title\n\n${value.substring(index)}';
   }
 }
 

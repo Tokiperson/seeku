@@ -15,6 +15,7 @@ dependencies:
   excel: ^4.0.6
   file_picker: ^10.3.3
   flutter_riverpod: ^3.0.0
+  flutter_markdown: ^0.7.7+1
   go_router: ^16.2.5
   path: ^1.9.1
   path_provider: ^2.1.5
@@ -33,10 +34,16 @@ flutter:
   uses-material-design: true
   assets:
     - flutter_logo_icon_pack/master_logo_1024.png
+    - windows/runner/resources/app_icon.ico
+    - docs/ABOUT.md
+    - docs/CONTACT.md
+    - LICENSE
 
 hooks:
   user_defines:
     sqlite3:
       source: system
       name_windows: winsqlite3
+
+
 
