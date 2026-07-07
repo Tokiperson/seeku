@@ -6,6 +6,7 @@ class SeekUColors {
   static const cquBlue = Color(0xFF005BAC);
   static const cquBlueDark = Color(0xFF003F7D);
   static const sky = Color(0xFFE8F2FF);
+  static const scheduleSurface = Color(0xFFEAF4FF);
   static const surface = Color(0xFFF6F8FC);
   static const border = Color(0xFFE2EAF5);
   static const text = Color(0xFF172033);
@@ -19,13 +20,22 @@ class SeekUColors {
   static const nowLine = Color(0xFFFFA8B8);
 }
 
-ThemeData buildSeekUTheme() {
+ThemeData buildSeekUTheme({
+  Color primaryColor = SeekUColors.cquBlue,
+  double fontScale = 1,
+}) {
   final colorScheme = ColorScheme.fromSeed(
-    seedColor: SeekUColors.cquBlue,
-    primary: SeekUColors.cquBlue,
+    seedColor: primaryColor,
+    primary: primaryColor,
     secondary: SeekUColors.success,
     surface: Colors.white,
   );
+  final baseTextTheme = Typography.material2021().black.apply(
+    bodyColor: SeekUColors.text,
+    displayColor: SeekUColors.text,
+    fontFamily: 'Microsoft YaHei UI',
+  );
+  final textTheme = baseTextTheme.apply(fontSizeFactor: fontScale);
 
   return ThemeData(
     useMaterial3: true,
@@ -33,11 +43,7 @@ ThemeData buildSeekUTheme() {
     scaffoldBackgroundColor: SeekUColors.surface,
     fontFamily: 'Microsoft YaHei UI',
     visualDensity: VisualDensity.standard,
-    textTheme: Typography.material2021().black.apply(
-      bodyColor: SeekUColors.text,
-      displayColor: SeekUColors.text,
-      fontFamily: 'Microsoft YaHei UI',
-    ),
+    textTheme: textTheme,
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.white,
       foregroundColor: SeekUColors.text,
@@ -48,14 +54,27 @@ ThemeData buildSeekUTheme() {
     ),
     navigationRailTheme: NavigationRailThemeData(
       backgroundColor: Colors.white,
-      selectedIconTheme: const IconThemeData(color: SeekUColors.cquBlue),
-      selectedLabelTextStyle: const TextStyle(
-        color: SeekUColors.cquBlue,
+      selectedIconTheme: IconThemeData(color: primaryColor),
+      selectedLabelTextStyle: TextStyle(
+        color: primaryColor,
         fontWeight: FontWeight.w700,
       ),
       unselectedIconTheme: const IconThemeData(color: SeekUColors.muted),
       unselectedLabelTextStyle: const TextStyle(color: SeekUColors.muted),
       indicatorColor: SeekUColors.sky,
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      indicatorColor: SeekUColors.sky,
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => TextStyle(
+          color: states.contains(WidgetState.selected)
+              ? primaryColor
+              : SeekUColors.muted,
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w800
+              : FontWeight.w600,
+        ),
+      ),
     ),
     cardTheme: CardThemeData(
       color: Colors.white,
@@ -77,15 +96,21 @@ ThemeData buildSeekUTheme() {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        textStyle: TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 14 * fontScale,
+        ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: SeekUColors.cquBlue,
+        foregroundColor: primaryColor,
         side: const BorderSide(color: SeekUColors.border),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        textStyle: TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 14 * fontScale,
+        ),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -98,7 +123,7 @@ ThemeData buildSeekUTheme() {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: SeekUColors.cquBlue, width: 1.4),
+        borderSide: BorderSide(color: primaryColor, width: 1.4),
       ),
     ),
   );

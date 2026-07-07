@@ -52,6 +52,14 @@ class _AndroidScheduleContent extends ConsumerWidget {
     final semesterAsync = ref.watch(currentSemesterProvider);
     final timeSlotsAsync = ref.watch(timeSlotsProvider);
     final selectedWeek = ref.watch(selectedWeekProvider);
+    final settingsAsync = ref.watch(settingsRepositoryProvider);
+    final settings = switch (settingsAsync) {
+      AsyncData(:final value) => value,
+      _ => null,
+    };
+    final sectionCount = settings?.visibleSectionCount ?? 13;
+    final showOffWeekCourses = settings?.showOffWeekCourses ?? false;
+    final courseColorOverrides = settings?.courseColorOverrides ?? const {};
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -105,6 +113,8 @@ class _AndroidScheduleContent extends ConsumerWidget {
                           semester: semester,
                           selectedWeek: selectedWeek,
                           openedAt: openedAt,
+                          sectionCount: sectionCount,
+                          includeOffWeekEntries: showOffWeekCourses,
                         );
                         final visible = mode == ScheduleViewMode.day
                             ? [selectedWeekday]
@@ -116,6 +126,7 @@ class _AndroidScheduleContent extends ConsumerWidget {
                             timeAxisSide: TimeAxisSide.left,
                             slotHeight: 72,
                             blueSurface: true,
+                            courseColorOverrides: courseColorOverrides,
                             onDaySelected: (weekday) {
                               ref
                                   .read(selectedWeekdayProvider.notifier)

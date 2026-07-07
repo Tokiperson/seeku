@@ -37,6 +37,7 @@ class SeekuDatabase {
           academicYear: '2025-2026',
           termIndex: 2,
           startsOn: DateTime(2026, 2, 23),
+          endsOn: DateTime(2026, 7, 12),
           isCurrent: true,
         ),
       );
@@ -98,6 +99,21 @@ class SeekuDatabase {
       _semesters[index] = semester.copyWith(
         isCurrent: semester.id == semesterId,
       );
+    }
+  }
+
+  Future<void> deleteSemester(int semesterId) async {
+    await ensureInitialized();
+    final index = _semesters.indexWhere((item) => item.id == semesterId);
+    if (index < 0) {
+      return;
+    }
+    final semester = _semesters[index];
+    _semesters.removeWhere((item) => item.id == semesterId);
+    _entries.removeWhere((entry) => entry.course.semesterId == semesterId);
+    if (semester.isCurrent && _semesters.isNotEmpty) {
+      _semesters.sort((a, b) => b.startsOn.compareTo(a.startsOn));
+      _semesters[0] = _semesters[0].copyWith(isCurrent: true);
     }
   }
 

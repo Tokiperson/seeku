@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
+import '../../../app/window_controls.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../ai/presentation/ai_core_status_button.dart';
 import '../domain/schedule_grid_models.dart';
@@ -53,123 +54,149 @@ class _DesktopScheduleContent extends ConsumerWidget {
     final semesterAsync = ref.watch(currentSemesterProvider);
     final timeSlotsAsync = ref.watch(timeSlotsProvider);
     final selectedWeek = ref.watch(selectedWeekProvider);
+    final settingsAsync = ref.watch(settingsRepositoryProvider);
+    final settings = switch (settingsAsync) {
+      AsyncData(:final value) => value,
+      _ => null,
+    };
+    final sectionCount = settings?.visibleSectionCount ?? 13;
+    final showOffWeekCourses = settings?.showOffWeekCourses ?? false;
+    final courseColorOverrides = settings?.courseColorOverrides ?? const {};
 
     return Scaffold(
       floatingActionButton: const AiCoreStatusButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      body: Row(
+      body: Column(
         children: [
-          NavigationRail(
-            selectedIndex: 0,
-            labelType: NavigationRailLabelType.all,
-            leading: Padding(
-              padding: const EdgeInsets.only(top: 16, bottom: 24),
-              child: IconButton.filled(
-                tooltip: '新增课程',
-                onPressed: () => context.go('/courses/new'),
-                icon: const Icon(Icons.add),
-              ),
-            ),
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.calendar_month_outlined),
-                label: Text('课表'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.upload_file_outlined),
-                label: Text('导入'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.settings_outlined),
-                label: Text('设置'),
-              ),
-            ],
-            onDestinationSelected: (index) {
-              if (index == 1) {
-                context.go('/import');
-              } else if (index == 2) {
-                context.go('/settings');
-              }
-            },
-          ),
-          const VerticalDivider(width: 1),
+          const DesktopWindowTitleBar(title: 'SeekU'),
           Expanded(
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _ScheduleToolbar(
-                      mode: mode,
-                      selectedWeek: selectedWeek,
-                      semesterAsync: semesterAsync,
+            child: Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: 0,
+                  labelType: NavigationRailLabelType.all,
+                  leading: Padding(
+                    padding: const EdgeInsets.only(top: 16, bottom: 24),
+                    child: IconButton.filled(
+                      tooltip: '新增课程',
+                      onPressed: () => context.go('/courses/new'),
+                      icon: const Icon(Icons.add),
                     ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: entriesAsync.when(
-                        data: (entries) => semesterAsync.when(
-                          data: (semester) => timeSlotsAsync.when(
-                            data: (timeSlots) {
-                              if (semester == null) {
-                                return const Center(child: Text('尚未创建学期'));
-                              }
-                              final grid = ScheduleGridBuilder.build(
-                                entries: entries,
-                                timeSlots: timeSlots,
-                                semester: semester,
-                                selectedWeek: selectedWeek,
-                                openedAt: openedAt,
-                              );
-                              final visible = mode == ScheduleViewMode.day
-                                  ? [selectedWeekday]
-                                  : const [1, 2, 3, 4, 5, 6, 7];
-                              return Card(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: SingleChildScrollView(
-                                    child: ScheduleGridView(
-                                      grid: grid,
-                                      visibleWeekdays: visible,
-                                      timeAxisSide: TimeAxisSide.right,
-                                      slotHeight: 68,
-                                      onDaySelected: (weekday) {
-                                        ref
-                                            .read(
-                                              selectedWeekdayProvider.notifier,
-                                            )
-                                            .setWeekday(weekday);
-                                        ref
-                                            .read(
-                                              scheduleViewModeProvider.notifier,
-                                            )
-                                            .setMode(ScheduleViewMode.day);
-                                      },
+                  ),
+                  destinations: const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.calendar_month_outlined),
+                      label: Text('课表'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.upload_file_outlined),
+                      label: Text('导入'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.settings_outlined),
+                      label: Text('设置'),
+                    ),
+                  ],
+                  onDestinationSelected: (index) {
+                    if (index == 1) {
+                      context.go('/import');
+                    } else if (index == 2) {
+                      context.go('/settings');
+                    }
+                  },
+                ),
+                const VerticalDivider(width: 1),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _ScheduleToolbar(
+                          mode: mode,
+                          selectedWeek: selectedWeek,
+                          semesterAsync: semesterAsync,
+                        ),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child: entriesAsync.when(
+                            data: (entries) => semesterAsync.when(
+                              data: (semester) => timeSlotsAsync.when(
+                                data: (timeSlots) {
+                                  if (semester == null) {
+                                    return const Center(child: Text('尚未创建学期'));
+                                  }
+                                  final grid = ScheduleGridBuilder.build(
+                                    entries: entries,
+                                    timeSlots: timeSlots,
+                                    semester: semester,
+                                    selectedWeek: selectedWeek,
+                                    openedAt: openedAt,
+                                    sectionCount: sectionCount,
+                                    includeOffWeekEntries: showOffWeekCourses,
+                                  );
+                                  final visible = mode == ScheduleViewMode.day
+                                      ? [selectedWeekday]
+                                      : const [1, 2, 3, 4, 5, 6, 7];
+                                  return Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: SeekUColors.scheduleSurface,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.white),
                                     ),
-                                  ),
+                                    child: SingleChildScrollView(
+                                      child: ScheduleGridView(
+                                        grid: grid,
+                                        visibleWeekdays: visible,
+                                        timeAxisSide: TimeAxisSide.right,
+                                        slotHeight: 68,
+                                        blueSurface: true,
+                                        courseColorOverrides:
+                                            courseColorOverrides,
+                                        onDaySelected: (weekday) {
+                                          ref
+                                              .read(
+                                                selectedWeekdayProvider
+                                                    .notifier,
+                                              )
+                                              .setWeekday(weekday);
+                                          ref
+                                              .read(
+                                                scheduleViewModeProvider
+                                                    .notifier,
+                                              )
+                                              .setMode(ScheduleViewMode.day);
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                },
+                                loading: () => const Center(
+                                  child: CircularProgressIndicator(),
                                 ),
-                              );
-                            },
+                                error: (error, stackTrace) =>
+                                    Center(child: Text('节次加载失败：$error')),
+                              ),
+                              loading: () => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                              error: (error, stackTrace) =>
+                                  Center(child: Text('学期加载失败：$error')),
+                            ),
                             loading: () => const Center(
                               child: CircularProgressIndicator(),
                             ),
                             error: (error, stackTrace) =>
-                                Center(child: Text('节次加载失败：$error')),
+                                Center(child: Text('课表加载失败：$error')),
                           ),
-                          loading: () =>
-                              const Center(child: CircularProgressIndicator()),
-                          error: (error, stackTrace) =>
-                              Center(child: Text('学期加载失败：$error')),
                         ),
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (error, stackTrace) =>
-                            Center(child: Text('课表加载失败：$error')),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ],

@@ -28,6 +28,7 @@ void main() {
           academicYear: '2025-2026',
           termIndex: 2,
           startsOn: DateTime(2026, 2, 23),
+          endsOn: DateTime(2026, 7, 12),
           isCurrent: true,
         ),
         existingEntries: const [],

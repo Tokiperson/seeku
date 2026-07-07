@@ -36,6 +36,9 @@ class ScheduleRepository {
   Future<void> setCurrentSemester(int semesterId) =>
       _database.setCurrentSemester(semesterId);
 
+  Future<void> deleteSemester(int semesterId) =>
+      _database.deleteSemester(semesterId);
+
   Future<List<TimeSlot>> getTimeSlots() async {
     await bootstrap();
     return _database.getTimeSlots();

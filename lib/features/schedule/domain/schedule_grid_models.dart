@@ -7,11 +7,13 @@ class ScheduleGrid {
     required this.days,
     required this.timeSlots,
     required this.selectedWeek,
+    required this.sectionCount,
   });
 
   final List<ScheduleGridDay> days;
   final List<TimeSlot> timeSlots;
   final int selectedWeek;
+  final int sectionCount;
 
   ScheduleGridDay dayForWeekday(int weekday) {
     return days.firstWhere((day) => day.weekday == weekday);
@@ -52,12 +54,14 @@ class ScheduleGridCourseBlock {
     required this.startSlotIndex,
     required this.slotSpan,
     required this.isCurrent,
+    required this.isInSelectedWeek,
   });
 
   final CourseEntry entry;
   final int startSlotIndex;
   final int slotSpan;
   final bool isCurrent;
+  final bool isInSelectedWeek;
 }
 
 class ScheduleGridBuilder {
@@ -69,7 +73,10 @@ class ScheduleGridBuilder {
     required Semester semester,
     required int selectedWeek,
     required DateTime openedAt,
+    int sectionCount = 13,
+    bool includeOffWeekEntries = false,
   }) {
+    final visibleSectionCount = sectionCount.clamp(1, 13).toInt();
     final sortedSlots = timeSlots.toList()
       ..sort((a, b) => a.section.compareTo(b.section));
     final slotBySection = {for (final slot in sortedSlots) slot.section: slot};
@@ -83,16 +90,23 @@ class ScheduleGridBuilder {
               .where(
                 (entry) =>
                     entry.occurrence.weekday == weekday &&
-                    entry.occursInWeek(selectedWeek),
+                    entry.occurrence.startSection <= visibleSectionCount &&
+                    (entry.occursInWeek(selectedWeek) || includeOffWeekEntries),
               )
               .toList()
-            ..sort(
-              (a, b) => a.occurrence.startSection.compareTo(
+            ..sort((a, b) {
+              final start = a.occurrence.startSection.compareTo(
                 b.occurrence.startSection,
-              ),
-            );
+              );
+              if (start != 0) {
+                return start;
+              }
+              final aCurrent = a.occursInWeek(selectedWeek) ? 1 : 0;
+              final bCurrent = b.occursInWeek(selectedWeek) ? 1 : 0;
+              return aCurrent.compareTo(bCurrent);
+            });
       final slots = [
-        for (var section = 1; section <= 13; section++)
+        for (var section = 1; section <= visibleSectionCount; section++)
           ScheduleGridSlot(section: section, timeSlot: slotBySection[section]),
       ];
       final currentFraction = _currentTimeFraction(
@@ -101,23 +115,29 @@ class ScheduleGridBuilder {
         slots: slots,
       );
       final blocks = dayEntries
-          .map(
-            (entry) => ScheduleGridCourseBlock(
+          .map((entry) {
+            final isInSelectedWeek = entry.occursInWeek(selectedWeek);
+            final startSlotIndex = (entry.occurrence.startSection - 1)
+                .clamp(0, visibleSectionCount - 1)
+                .toInt();
+            final maxSpan = visibleSectionCount - startSlotIndex;
+            final slotSpan =
+                (entry.occurrence.endSection -
+                        entry.occurrence.startSection +
+                        1)
+                    .clamp(1, maxSpan)
+                    .toInt();
+            return ScheduleGridCourseBlock(
               entry: entry,
-              startSlotIndex: (entry.occurrence.startSection - 1)
-                  .clamp(0, 12)
-                  .toInt(),
-              slotSpan:
-                  (entry.occurrence.endSection -
-                          entry.occurrence.startSection +
-                          1)
-                      .clamp(1, 13)
-                      .toInt(),
+              startSlotIndex: startSlotIndex,
+              slotSpan: slotSpan,
               isCurrent:
+                  isInSelectedWeek &&
                   currentFraction != null &&
                   _entryContainsTime(entry, openedAt, slotBySection),
-            ),
-          )
+              isInSelectedWeek: isInSelectedWeek,
+            );
+          })
           .toList(growable: false);
       days.add(
         ScheduleGridDay(
@@ -135,6 +155,7 @@ class ScheduleGridBuilder {
       days: days,
       timeSlots: sortedSlots,
       selectedWeek: selectedWeek,
+      sectionCount: visibleSectionCount,
     );
   }
 

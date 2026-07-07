@@ -38,5 +38,34 @@ void main() {
       );
     },
   );
-}
 
+  test(
+    'SettingsRepository stores schedule and appearance preferences',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final settings = SettingsRepository(preferences);
+
+      await settings.setVisibleSectionCount(20);
+      expect(settings.visibleSectionCount, 13);
+
+      await settings.setShowOffWeekCourses(true);
+      expect(settings.showOffWeekCourses, isTrue);
+
+      await settings.setPrimaryColorValue(0xFF1E7D6E);
+      expect(settings.primaryColorValue, 0xFF1E7D6E);
+
+      await settings.setFontSizeName('large');
+      expect(settings.fontScale, greaterThan(1));
+
+      await settings.setLanguageCode('en');
+      expect(settings.languageCode, 'en');
+
+      await settings.setCourseColorOverride('数据结构', 0xFF247BA0);
+      expect(settings.courseColorOverrides['数据结构'], 0xFF247BA0);
+
+      await settings.clearCourseColorOverride('数据结构');
+      expect(settings.courseColorOverrides.containsKey('数据结构'), isFalse);
+    },
+  );
+}

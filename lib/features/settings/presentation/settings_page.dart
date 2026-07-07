@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/build_info.dart';
 import '../../../app/theme.dart';
+import '../../../app/window_controls.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/settings/settings_repository.dart';
 import '../../schedule/domain/schedule_models.dart';
+import '../../schedule/presentation/schedule_course_colors.dart';
 
 class _AiApiKeyCard extends ConsumerStatefulWidget {
   const _AiApiKeyCard();
@@ -28,70 +31,64 @@ class _AiApiKeyCardState extends ConsumerState<_AiApiKeyCard> {
   @override
   Widget build(BuildContext context) {
     final settingsAsync = ref.watch(settingsRepositoryProvider);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: settingsAsync.when(
-          data: (settings) {
-            final currentKey = settings.aiApiKey ?? '';
-            if (_loadedKey != currentKey) {
-              _loadedKey = currentKey;
-              _controller.text = currentKey;
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'AI API Key',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '默认使用你填写的本地 Key；未配置时可使用 5 天内置试用。',
-                  style: TextStyle(color: SeekUColors.muted),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _controller,
-                  obscureText: _obscure,
-                  decoration: InputDecoration(
-                    labelText: 'Moonshot / Kimi API Key',
-                    prefixIcon: const Icon(Icons.key_outlined),
-                    suffixIcon: IconButton(
-                      tooltip: _obscure ? '显示' : '隐藏',
-                      icon: Icon(
-                        _obscure
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
-                      onPressed: () => setState(() => _obscure = !_obscure),
+    return _Panel(
+      title: 'API 配置',
+      icon: Icons.key_outlined,
+      child: settingsAsync.when(
+        data: (settings) {
+          final currentKey = settings.aiApiKey ?? '';
+          if (_loadedKey != currentKey) {
+            _loadedKey = currentKey;
+            _controller.text = currentKey;
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '默认使用你填写的本地 Key；未配置时可使用 5 天内置试用。',
+                style: TextStyle(color: SeekUColors.muted),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _controller,
+                obscureText: _obscure,
+                decoration: InputDecoration(
+                  labelText: 'Moonshot / Kimi API Key',
+                  prefixIcon: const Icon(Icons.key_outlined),
+                  suffixIcon: IconButton(
+                    tooltip: _obscure ? '显示' : '隐藏',
+                    icon: Icon(
+                      _obscure
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
                     ),
+                    onPressed: () => setState(() => _obscure = !_obscure),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: () => _save(settings),
-                        icon: const Icon(Icons.save_outlined),
-                        label: const Text('保存 Key'),
-                      ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () => _save(settings),
+                      icon: const Icon(Icons.save_outlined),
+                      label: const Text('保存 Key'),
                     ),
-                    const SizedBox(width: 10),
-                    IconButton.outlined(
-                      tooltip: '清空 Key',
-                      onPressed: () => _clear(settings),
-                      icon: const Icon(Icons.delete_outline),
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
-          loading: () => const LinearProgressIndicator(),
-          error: (error, stackTrace) => Text('AI 设置加载失败：$error'),
-        ),
+                  ),
+                  const SizedBox(width: 10),
+                  IconButton.outlined(
+                    tooltip: '清空 Key',
+                    onPressed: () => _clear(settings),
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+        loading: () => const LinearProgressIndicator(),
+        error: (error, stackTrace) => Text('AI 设置加载失败：$error'),
       ),
     );
   }
@@ -101,9 +98,7 @@ class _AiApiKeyCardState extends ConsumerState<_AiApiKeyCard> {
     ref.invalidate(aiApiKeyConfiguredProvider);
     ref.invalidate(settingsRepositoryProvider);
     await ref.read(aiCoreControllerProvider.notifier).checkCore();
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('AI API Key 已保存'), showCloseIcon: true),
     );
@@ -115,286 +110,283 @@ class _AiApiKeyCardState extends ConsumerState<_AiApiKeyCard> {
     ref.invalidate(aiApiKeyConfiguredProvider);
     ref.invalidate(settingsRepositoryProvider);
     await ref.read(aiCoreControllerProvider.notifier).checkCore();
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('AI API Key 已清空'), showCloseIcon: true),
     );
   }
 }
 
-class SettingsPage extends ConsumerWidget {
+enum _SettingsSection { schedule, semesters, global, about }
+
+class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final snapshotAsync = ref.watch(importSnapshotEnabledProvider);
-    final timeSlotsAsync = ref.watch(timeSlotsProvider);
-    final semesterAsync = ref.watch(currentSemesterProvider);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('设置'),
-        leading: IconButton(
-          tooltip: '返回课表',
-          onPressed: () => context.go('/'),
-          icon: const Icon(Icons.arrow_back),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 380,
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              '基础设置',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            semesterAsync.when(
-                              data: (semester) => ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                leading: const Icon(
-                                  Icons.school_outlined,
-                                  color: SeekUColors.cquBlue,
-                                ),
-                                title: const Text('当前学期'),
-                                subtitle: Text(semester?.name ?? '尚未创建学期'),
-                                trailing: IconButton(
-                                  tooltip: semester == null ? '新增学期' : '编辑学期',
-                                  icon: Icon(
-                                    semester == null
-                                        ? Icons.add_circle_outline
-                                        : Icons.edit_outlined,
-                                  ),
-                                  onPressed: () =>
-                                      _editSemester(context, ref, semester),
-                                ),
-                              ),
-                              loading: () => const LinearProgressIndicator(),
-                              error: (error, stackTrace) =>
-                                  Text('学期加载失败：$error'),
-                            ),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () =>
-                                    _editSemester(context, ref, null),
-                                icon: const Icon(Icons.add_outlined),
-                                label: const Text('新增学期'),
-                              ),
-                            ),
-                            const Divider(height: 28),
-                            snapshotAsync.when(
-                              data: (enabled) => SwitchListTile(
-                                contentPadding: EdgeInsets.zero,
-                                secondary: const Icon(
-                                  Icons.archive_outlined,
-                                  color: SeekUColors.cquBlue,
-                                ),
-                                title: const Text('保存导入原始文件'),
-                                subtitle: const Text('用于重跑解析与排查导入问题'),
-                                value: enabled,
-                                onChanged: (value) async {
-                                  final settings = await ref.read(
-                                    settingsRepositoryProvider.future,
-                                  );
-                                  await settings.setSaveImportSnapshots(value);
-                                  ref.invalidate(importSnapshotEnabledProvider);
-                                },
-                              ),
-                              loading: () => const LinearProgressIndicator(),
-                              error: (error, stackTrace) =>
-                                  Text('设置加载失败：$error'),
-                            ),
-                            const ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: Icon(
-                                Icons.palette_outlined,
-                                color: SeekUColors.cquBlue,
-                              ),
-                              title: Text('外观'),
-                              subtitle: Text('CQU 蓝白 · 桌面端平滑显示'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const _AiApiKeyCard(),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '重庆大学默认节次表',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text('beta 内置默认时间，可按实际校历手动修正。'),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: timeSlotsAsync.when(
-                          data: (slots) => ListView.separated(
-                            itemCount: slots.length,
-                            separatorBuilder: (context, index) =>
-                                const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              final slot = slots[index];
-                              return ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: SeekUColors.sky,
-                                  foregroundColor: SeekUColors.cquBlue,
-                                  child: Text('${slot.section}'),
-                                ),
-                                title: Text('第 ${slot.section} 节'),
-                                subtitle: Text(
-                                  '${slot.startTime} - ${slot.endTime} · ${slot.profileName}',
-                                ),
-                                trailing: IconButton(
-                                  tooltip: '编辑节次',
-                                  icon: const Icon(Icons.edit_outlined),
-                                  onPressed: () =>
-                                      _editSlot(context, ref, slot),
-                                ),
-                              );
-                            },
-                          ),
-                          loading: () =>
-                              const Center(child: CircularProgressIndicator()),
-                          error: (error, stackTrace) =>
-                              Center(child: Text('节次加载失败：$error')),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  ConsumerState<SettingsPage> createState() => _SettingsPageState();
+}
 
-  Future<void> _editSemester(
-    BuildContext context,
-    WidgetRef ref,
-    Semester? semester,
-  ) async {
-    final nameController = TextEditingController(text: semester?.name ?? '');
-    final yearController = TextEditingController(
-      text: semester?.academicYear ?? '2025-2026',
-    );
-    final termController = TextEditingController(
-      text: (semester?.termIndex ?? 2).toString(),
-    );
-    final startController = TextEditingController(
-      text: _formatDate(semester?.startsOn ?? DateTime.now()),
-    );
-    final result = await showDialog<Semester>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(semester == null ? '新增学期' : '编辑学期'),
-        content: SizedBox(
-          width: 420,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: '学期名称'),
+class _SettingsPageState extends ConsumerState<SettingsPage> {
+  _SettingsSection _selected = _SettingsSection.schedule;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: seekuSupportsDesktopWindowControls
+          ? null
+          : AppBar(
+              title: const Text('设置'),
+              leading: IconButton(
+                tooltip: '返回课表',
+                onPressed: () => context.go('/'),
+                icon: const Icon(Icons.arrow_back),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: yearController,
-                decoration: const InputDecoration(labelText: '学年，例如 2025-2026'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: termController,
-                decoration: const InputDecoration(labelText: '学期序号，例如 1 或 2'),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: startController,
-                decoration: const InputDecoration(labelText: '开学日期 yyyy-mm-dd'),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final parsedDate = DateTime.tryParse(startController.text.trim());
-              final termIndex = int.tryParse(termController.text.trim());
-              if (nameController.text.trim().isEmpty ||
-                  parsedDate == null ||
-                  termIndex == null) {
-                return;
-              }
-              Navigator.of(context).pop(
-                Semester(
-                  id: semester?.id ?? 0,
-                  name: nameController.text.trim(),
-                  academicYear: yearController.text.trim(),
-                  termIndex: termIndex,
-                  startsOn: parsedDate,
-                  isCurrent: true,
-                ),
-              );
-            },
-            child: const Text('保存'),
+            ),
+      body: Column(
+        children: [
+          if (seekuSupportsDesktopWindowControls)
+            DesktopWindowTitleBar(title: '设置', onBack: () => context.go('/')),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 760) {
+                  return _MobileSettingsMenu(onOpen: _openMobileSection);
+                }
+                return Row(
+                  children: [
+                    _SettingsMenu(
+                      selected: _selected,
+                      onSelected: (section) =>
+                          setState(() => _selected = section),
+                    ),
+                    const VerticalDivider(width: 1),
+                    Expanded(child: _SectionBody(section: _selected)),
+                  ],
+                );
+              },
+            ),
           ),
         ],
       ),
     );
-    nameController.dispose();
-    yearController.dispose();
-    termController.dispose();
-    startController.dispose();
-    if (result == null) {
-      return;
-    }
-    if (semester == null) {
-      await ref.read(scheduleRepositoryProvider).createSemester(result);
-    } else {
-      await ref.read(scheduleRepositoryProvider).updateSemester(result);
-    }
-    ref.invalidate(semestersProvider);
-    ref.invalidate(currentSemesterProvider);
-    ref.invalidate(currentSemesterEntriesProvider);
+  }
+
+  void _openMobileSection(_SettingsSection section) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: Text(_sectionLabel(section))),
+          body: _SectionBody(section: section),
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsMenu extends StatelessWidget {
+  const _SettingsMenu({required this.selected, required this.onSelected});
+
+  final _SettingsSection selected;
+  final ValueChanged<_SettingsSection> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 264,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(8, 8, 8, 16),
+            child: Text(
+              '设置',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+            ),
+          ),
+          for (final section in _SettingsSection.values)
+            _MenuTile(
+              section: section,
+              selected: selected == section,
+              onTap: () => onSelected(section),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MobileSettingsMenu extends StatelessWidget {
+  const _MobileSettingsMenu({required this.onOpen});
+
+  final ValueChanged<_SettingsSection> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        for (final section in _SettingsSection.values)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: ListTile(
+              tileColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: const BorderSide(color: SeekUColors.border),
+              ),
+              leading: Icon(_sectionIcon(section), color: SeekUColors.cquBlue),
+              title: Text(_sectionLabel(section)),
+              subtitle: Text(_sectionDescription(section)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => onOpen(section),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _MenuTile extends StatelessWidget {
+  const _MenuTile({
+    required this.section,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _SettingsSection section;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        selected: selected,
+        selectedTileColor: SeekUColors.sky,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        leading: Icon(_sectionIcon(section)),
+        title: Text(_sectionLabel(section)),
+        subtitle: Text(_sectionDescription(section)),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
+class _SectionBody extends StatelessWidget {
+  const _SectionBody({required this.section});
+
+  final _SettingsSection section;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (section) {
+      _SettingsSection.schedule => const _ScheduleSettingsView(),
+      _SettingsSection.semesters => const _SemesterManagementView(),
+      _SettingsSection.global => const _GlobalSettingsView(),
+      _SettingsSection.about => const _AboutView(),
+    };
+  }
+}
+
+class _ScheduleSettingsView extends ConsumerWidget {
+  const _ScheduleSettingsView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settingsAsync = ref.watch(settingsRepositoryProvider);
+    final timeSlotsAsync = ref.watch(timeSlotsProvider);
+    return settingsAsync.when(
+      data: (settings) => ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          _Panel(
+            title: '课表设置',
+            icon: Icons.calendar_month_outlined,
+            child: Column(
+              children: [
+                DropdownButtonFormField<int>(
+                  initialValue: settings.visibleSectionCount,
+                  decoration: const InputDecoration(
+                    labelText: '节次数量',
+                    prefixIcon: Icon(Icons.view_agenda_outlined),
+                  ),
+                  items: [
+                    for (var section = 1; section <= 13; section++)
+                      DropdownMenuItem(
+                        value: section,
+                        child: Text('$section 节'),
+                      ),
+                  ],
+                  onChanged: (value) async {
+                    if (value == null) return;
+                    await settings.setVisibleSectionCount(value);
+                    ref.invalidate(settingsRepositoryProvider);
+                  },
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  secondary: const Icon(Icons.visibility_outlined),
+                  title: const Text('显示非本周课程'),
+                  subtitle: const Text('非本周课程会在课表中淡化显示'),
+                  value: settings.showOffWeekCourses,
+                  onChanged: (value) async {
+                    await settings.setShowOffWeekCourses(value);
+                    ref.invalidate(settingsRepositoryProvider);
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _Panel(
+            title: '时间设置',
+            icon: Icons.schedule_outlined,
+            child: timeSlotsAsync.when(
+              data: (slots) => Column(
+                children: [for (final slot in slots) _TimeSlotTile(slot: slot)],
+              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (error, stackTrace) => Text('节次加载失败：$error'),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const _CourseColorPanel(),
+        ],
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => Center(child: Text('设置加载失败：$error')),
+    );
+  }
+}
+
+class _TimeSlotTile extends ConsumerWidget {
+  const _TimeSlotTile({required this.slot});
+
+  final TimeSlot slot;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        backgroundColor: SeekUColors.sky,
+        foregroundColor: SeekUColors.cquBlue,
+        child: Text('${slot.section}'),
+      ),
+      title: Text('第 ${slot.section} 节'),
+      subtitle: Text(
+        '${slot.startTime} - ${slot.endTime} · ${slot.profileName}',
+      ),
+      trailing: IconButton(
+        tooltip: '编辑节次',
+        icon: const Icon(Icons.edit_outlined),
+        onPressed: () => _editSlot(context, ref, slot),
+      ),
+    );
   }
 
   Future<void> _editSlot(
@@ -441,15 +433,630 @@ class SettingsPage extends ConsumerWidget {
     );
     startController.dispose();
     endController.dispose();
-    if (result == null) {
-      return;
-    }
+    if (result == null) return;
     await ref.read(scheduleRepositoryProvider).updateTimeSlot(result);
     ref.invalidate(timeSlotsProvider);
   }
+}
 
-  String _formatDate(DateTime value) {
-    String two(int input) => input.toString().padLeft(2, '0');
-    return '${value.year}-${two(value.month)}-${two(value.day)}';
+class _CourseColorPanel extends ConsumerWidget {
+  const _CourseColorPanel();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settingsAsync = ref.watch(settingsRepositoryProvider);
+    final entriesAsync = ref.watch(currentSemesterEntriesProvider);
+    return _Panel(
+      title: '课表颜色管理',
+      icon: Icons.palette_outlined,
+      trailing: settingsAsync.maybeWhen(
+        data: (settings) => TextButton.icon(
+          onPressed: () async {
+            await settings.clearAllCourseColorOverrides();
+            ref.invalidate(settingsRepositoryProvider);
+          },
+          icon: const Icon(Icons.refresh_outlined),
+          label: const Text('全部自动'),
+        ),
+        orElse: () => null,
+      ),
+      child: settingsAsync.when(
+        data: (settings) => entriesAsync.when(
+          data: (entries) {
+            final courseNames =
+                entries.map((entry) => entry.course.name).toSet().toList()
+                  ..sort();
+            if (courseNames.isEmpty) {
+              return const Text('当前学期暂无课程');
+            }
+            return Column(
+              children: [
+                for (final courseName in courseNames)
+                  _CourseColorTile(courseName: courseName, settings: settings),
+              ],
+            );
+          },
+          loading: () => const LinearProgressIndicator(),
+          error: (error, stackTrace) => Text('课程加载失败：$error'),
+        ),
+        loading: () => const LinearProgressIndicator(),
+        error: (error, stackTrace) => Text('设置加载失败：$error'),
+      ),
+    );
   }
+}
+
+class _CourseColorTile extends ConsumerWidget {
+  const _CourseColorTile({required this.courseName, required this.settings});
+
+  final String courseName;
+  final SettingsRepository settings;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final color = CourseColorPalette.colorForCourse(
+      courseName,
+      settings.courseColorOverrides,
+    );
+    final custom = settings.courseColorOverrides.containsKey(courseName);
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: SeekUColors.border),
+        ),
+      ),
+      title: Text(courseName),
+      subtitle: Text(custom ? '自定义颜色' : '自动稳定颜色'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          PopupMenuButton<Color>(
+            tooltip: '选择颜色',
+            icon: const Icon(Icons.color_lens_outlined),
+            onSelected: (value) async {
+              await settings.setCourseColorOverride(
+                courseName,
+                value.toARGB32(),
+              );
+              ref.invalidate(settingsRepositoryProvider);
+            },
+            itemBuilder: (context) => [
+              for (final option in _themeColorOptions)
+                PopupMenuItem(
+                  value: option.color,
+                  child: Row(
+                    children: [
+                      _ColorDot(color: option.color),
+                      const SizedBox(width: 10),
+                      Text(option.label),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          IconButton(
+            tooltip: '恢复自动颜色',
+            onPressed: custom
+                ? () async {
+                    await settings.clearCourseColorOverride(courseName);
+                    ref.invalidate(settingsRepositoryProvider);
+                  }
+                : null,
+            icon: const Icon(Icons.auto_fix_high_outlined),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SemesterManagementView extends ConsumerWidget {
+  const _SemesterManagementView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final semestersAsync = ref.watch(semestersProvider);
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        _Panel(
+          title: '学期管理',
+          icon: Icons.school_outlined,
+          trailing: FilledButton.icon(
+            onPressed: () => showSemesterEditor(context, ref, null),
+            icon: const Icon(Icons.add_outlined),
+            label: const Text('新增学期'),
+          ),
+          child: semestersAsync.when(
+            data: (semesters) {
+              if (semesters.isEmpty) return const Text('尚未创建学期');
+              return Column(
+                children: [
+                  for (final semester in semesters)
+                    _SemesterTile(semester: semester),
+                ],
+              );
+            },
+            loading: () => const LinearProgressIndicator(),
+            error: (error, stackTrace) => Text('学期加载失败：$error'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SemesterTile extends ConsumerWidget {
+  const _SemesterTile({required this.semester});
+
+  final Semester semester;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        semester.isCurrent ? Icons.flag : Icons.school_outlined,
+        color: semester.isCurrent ? SeekUColors.success : SeekUColors.cquBlue,
+      ),
+      title: Text(semester.name),
+      subtitle: Text(
+        '${_formatDate(semester.startsOn)} - ${_formatDate(semester.endsOn)} · ${semester.academicYear} 第 ${semester.termIndex} 学期',
+      ),
+      trailing: Wrap(
+        spacing: 4,
+        children: [
+          IconButton(
+            tooltip: '设为当前学期',
+            onPressed: semester.isCurrent
+                ? null
+                : () async {
+                    await ref
+                        .read(scheduleRepositoryProvider)
+                        .setCurrentSemester(semester.id);
+                    _invalidateSemesterRefs(ref);
+                  },
+            icon: const Icon(Icons.flag_outlined),
+          ),
+          IconButton(
+            tooltip: '编辑学期',
+            onPressed: () => showSemesterEditor(context, ref, semester),
+            icon: const Icon(Icons.edit_outlined),
+          ),
+          IconButton(
+            tooltip: '删除学期',
+            onPressed: () => _deleteSemester(context, ref),
+            icon: const Icon(Icons.delete_outline),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteSemester(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除学期'),
+        content: Text('确认删除“${semester.name}”吗？该学期下的课程也会一起删除。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(scheduleRepositoryProvider).deleteSemester(semester.id);
+    _invalidateSemesterRefs(ref);
+  }
+}
+
+class _GlobalSettingsView extends ConsumerWidget {
+  const _GlobalSettingsView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settingsAsync = ref.watch(settingsRepositoryProvider);
+    final snapshotAsync = ref.watch(importSnapshotEnabledProvider);
+    return settingsAsync.when(
+      data: (settings) => ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          _Panel(
+            title: '全局设置',
+            icon: Icons.tune_outlined,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('软件整体颜色'),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    for (final option in _themeColorOptions)
+                      ChoiceChip(
+                        selected:
+                            settings.primaryColorValue ==
+                            option.color.toARGB32(),
+                        avatar: _ColorDot(color: option.color),
+                        label: Text(option.label),
+                        onSelected: (_) async {
+                          await settings.setPrimaryColorValue(
+                            option.color.toARGB32(),
+                          );
+                          ref.invalidate(settingsRepositoryProvider);
+                        },
+                      ),
+                  ],
+                ),
+                const Divider(height: 28),
+                const Text('软件语言'),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  initialValue: settings.languageCode,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.language_outlined),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'zh', child: Text('简体中文')),
+                    DropdownMenuItem(value: 'en', child: Text('English（占位）')),
+                  ],
+                  onChanged: (value) async {
+                    if (value == null) return;
+                    await settings.setLanguageCode(value);
+                    ref.invalidate(settingsRepositoryProvider);
+                  },
+                ),
+                const Divider(height: 28),
+                const Text('字体大小'),
+                const SizedBox(height: 10),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'small', label: Text('小')),
+                    ButtonSegment(value: 'medium', label: Text('中')),
+                    ButtonSegment(value: 'large', label: Text('大')),
+                  ],
+                  selected: {settings.fontSizeName},
+                  onSelectionChanged: (selection) async {
+                    await settings.setFontSizeName(selection.first);
+                    ref.invalidate(settingsRepositoryProvider);
+                  },
+                ),
+                const Divider(height: 28),
+                snapshotAsync.when(
+                  data: (enabled) => SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: const Icon(Icons.archive_outlined),
+                    title: const Text('保存导入原始文件'),
+                    subtitle: const Text('用于重跑解析与排查导入问题'),
+                    value: enabled,
+                    onChanged: (value) async {
+                      await settings.setSaveImportSnapshots(value);
+                      ref.invalidate(importSnapshotEnabledProvider);
+                    },
+                  ),
+                  loading: () => const LinearProgressIndicator(),
+                  error: (error, stackTrace) => Text('设置加载失败：$error'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          const _AiApiKeyCard(),
+        ],
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => Center(child: Text('设置加载失败：$error')),
+    );
+  }
+}
+
+class _AboutView extends StatelessWidget {
+  const _AboutView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.all(24),
+          children: [
+            Center(
+              child: Image.asset(
+                'flutter_logo_icon_pack/master_logo_1024.png',
+                width: 132,
+                height: 132,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Center(
+              child: Text(
+                SeekUBuildInfo.displayVersion,
+                style: TextStyle(
+                  color: SeekUColors.muted,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            _AboutTile(title: '关于SeekU', body: 'SeekU 是面向重庆大学课表管理的本地优先应用。'),
+            _AboutTile(title: '用户协议', body: '用户协议内容将在后续版本补充。'),
+            _AboutTile(title: '联系我们', body: '可通过项目仓库或维护者提供的联系方式反馈问题。'),
+            _AboutTile(title: '开源协议', body: '本项目遵循仓库 LICENSE 文件中的开源协议。'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AboutTile extends StatelessWidget {
+  const _AboutTile({required this.title, required this.body});
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.info_outline),
+      title: Text(title),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(title),
+          content: Text(body),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('确定'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Panel extends StatelessWidget {
+  const _Panel({
+    required this.title,
+    required this.icon,
+    required this.child,
+    this.trailing,
+  });
+
+  final String title;
+  final IconData icon;
+  final Widget child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: SeekUColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: SeekUColors.cquBlue),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              ...trailing == null ? const <Widget>[] : [trailing!],
+            ],
+          ),
+          const SizedBox(height: 16),
+          Material(color: Colors.transparent, child: child),
+        ],
+      ),
+    );
+  }
+}
+
+class _ThemeColorOption {
+  const _ThemeColorOption(this.label, this.color);
+
+  final String label;
+  final Color color;
+}
+
+const _themeColorOptions = [
+  _ThemeColorOption('CQU 蓝', SeekUColors.cquBlue),
+  _ThemeColorOption('湖绿', Color(0xFF1E7D6E)),
+  _ThemeColorOption('松石', Color(0xFF247BA0)),
+  _ThemeColorOption('梅红', Color(0xFFB03A5B)),
+  _ThemeColorOption('石墨', Color(0xFF425466)),
+];
+
+class _ColorDot extends StatelessWidget {
+  const _ColorDot({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 18,
+      height: 18,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        border: Border.all(color: SeekUColors.border),
+      ),
+    );
+  }
+}
+
+Future<void> showSemesterEditor(
+  BuildContext context,
+  WidgetRef ref,
+  Semester? semester,
+) async {
+  final now = DateTime.now();
+  final defaultStart = DateTime(now.year, now.month, now.day);
+  final nameController = TextEditingController(text: semester?.name ?? '');
+  final yearController = TextEditingController(
+    text: semester?.academicYear ?? '2025-2026',
+  );
+  final termController = TextEditingController(
+    text: (semester?.termIndex ?? 2).toString(),
+  );
+  final startController = TextEditingController(
+    text: _formatDate(semester?.startsOn ?? defaultStart),
+  );
+  final endController = TextEditingController(
+    text: _formatDate(
+      semester?.endsOn ?? defaultStart.add(const Duration(days: 139)),
+    ),
+  );
+  final result = await showDialog<Semester>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(semester == null ? '新增学期' : '编辑学期'),
+      content: SizedBox(
+        width: 460,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: '学期名称'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: yearController,
+              decoration: const InputDecoration(labelText: '学年，例如 2025-2026'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: termController,
+              decoration: const InputDecoration(labelText: '学期序号，例如 1 或 2'),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: startController,
+              decoration: const InputDecoration(labelText: '开始日期 yyyy-mm-dd'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: endController,
+              decoration: const InputDecoration(labelText: '结束日期 yyyy-mm-dd'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final startsOn = DateTime.tryParse(startController.text.trim());
+            final endsOn = DateTime.tryParse(endController.text.trim());
+            final termIndex = int.tryParse(termController.text.trim());
+            if (nameController.text.trim().isEmpty ||
+                startsOn == null ||
+                endsOn == null ||
+                termIndex == null ||
+                endsOn.isBefore(startsOn)) {
+              return;
+            }
+            Navigator.of(context).pop(
+              Semester(
+                id: semester?.id ?? 0,
+                name: nameController.text.trim(),
+                academicYear: yearController.text.trim(),
+                termIndex: termIndex,
+                startsOn: startsOn,
+                endsOn: endsOn,
+                isCurrent: semester?.isCurrent ?? true,
+              ),
+            );
+          },
+          child: const Text('保存'),
+        ),
+      ],
+    ),
+  );
+  nameController.dispose();
+  yearController.dispose();
+  termController.dispose();
+  startController.dispose();
+  endController.dispose();
+  if (result == null) return;
+  if (semester == null) {
+    await ref.read(scheduleRepositoryProvider).createSemester(result);
+  } else {
+    await ref.read(scheduleRepositoryProvider).updateSemester(result);
+  }
+  _invalidateSemesterRefs(ref);
+}
+
+void _invalidateSemesterRefs(WidgetRef ref) {
+  ref.invalidate(semestersProvider);
+  ref.invalidate(currentSemesterProvider);
+  ref.invalidate(currentSemesterEntriesProvider);
+}
+
+String _formatDate(DateTime value) {
+  String two(int input) => input.toString().padLeft(2, '0');
+  return '${value.year}-${two(value.month)}-${two(value.day)}';
+}
+
+String _sectionLabel(_SettingsSection section) {
+  return switch (section) {
+    _SettingsSection.schedule => '课表设置',
+    _SettingsSection.semesters => '学期管理',
+    _SettingsSection.global => '全局设置',
+    _SettingsSection.about => '关于软件',
+  };
+}
+
+String _sectionDescription(_SettingsSection section) {
+  return switch (section) {
+    _SettingsSection.schedule => '节次、时间、颜色和非本周课程',
+    _SettingsSection.semesters => '日期、新增、删除和当前学期',
+    _SettingsSection.global => '颜色、API、语言和字体大小',
+    _SettingsSection.about => '版本、协议和联系方式',
+  };
+}
+
+IconData _sectionIcon(_SettingsSection section) {
+  return switch (section) {
+    _SettingsSection.schedule => Icons.calendar_month_outlined,
+    _SettingsSection.semesters => Icons.school_outlined,
+    _SettingsSection.global => Icons.tune_outlined,
+    _SettingsSection.about => Icons.info_outline,
+  };
 }

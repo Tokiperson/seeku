@@ -5,6 +5,7 @@ class Semester {
     required this.academicYear,
     required this.termIndex,
     required this.startsOn,
+    required this.endsOn,
     required this.isCurrent,
   });
 
@@ -13,6 +14,7 @@ class Semester {
   final String academicYear;
   final int termIndex;
   final DateTime startsOn;
+  final DateTime endsOn;
   final bool isCurrent;
 
   Semester copyWith({
@@ -21,6 +23,7 @@ class Semester {
     String? academicYear,
     int? termIndex,
     DateTime? startsOn,
+    DateTime? endsOn,
     bool? isCurrent,
   }) {
     return Semester(
@@ -29,6 +32,7 @@ class Semester {
       academicYear: academicYear ?? this.academicYear,
       termIndex: termIndex ?? this.termIndex,
       startsOn: startsOn ?? this.startsOn,
+      endsOn: endsOn ?? this.endsOn,
       isCurrent: isCurrent ?? this.isCurrent,
     );
   }

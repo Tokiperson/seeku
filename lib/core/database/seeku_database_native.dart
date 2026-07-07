@@ -47,6 +47,7 @@ class SeekuDatabase extends GeneratedDatabase {
         academic_year TEXT NOT NULL,
         term_index INTEGER NOT NULL,
         starts_on TEXT NOT NULL,
+        ends_on TEXT NOT NULL,
         is_current INTEGER NOT NULL DEFAULT 0
       )
     ''');
@@ -93,6 +94,29 @@ class SeekuDatabase extends GeneratedDatabase {
         status TEXT NOT NULL
       )
     ''');
+    await _migrateSemesterEndsOn();
+  }
+
+  Future<void> _migrateSemesterEndsOn() async {
+    final rows = await customSelect('PRAGMA table_info(semesters)').get();
+    final hasEndsOn = rows.any((row) => row.read<String>('name') == 'ends_on');
+    if (!hasEndsOn) {
+      await customStatement('ALTER TABLE semesters ADD COLUMN ends_on TEXT');
+    }
+    final semesters = await customSelect(
+      'SELECT id, starts_on, ends_on FROM semesters',
+    ).get();
+    for (final row in semesters) {
+      final endsOn = row.readNullable<String>('ends_on');
+      if (endsOn != null && endsOn.isNotEmpty) {
+        continue;
+      }
+      final startsOn = DateTime.parse(row.read<String>('starts_on'));
+      await customStatement('UPDATE semesters SET ends_on = ? WHERE id = ?', [
+        startsOn.add(const Duration(days: 139)).toIso8601String(),
+        row.read<int>('id'),
+      ]);
+    }
   }
 
   Future<void> seedDefaults() async {
@@ -105,6 +129,7 @@ class SeekuDatabase extends GeneratedDatabase {
           academicYear: '2025-2026',
           termIndex: 2,
           startsOn: DateTime(2026, 2, 23),
+          endsOn: DateTime(2026, 7, 12),
           isCurrent: true,
         ),
       );
@@ -148,12 +173,13 @@ class SeekuDatabase extends GeneratedDatabase {
       await customStatement('UPDATE semesters SET is_current = 0');
     }
     await customStatement(
-      'INSERT INTO semesters (name, academic_year, term_index, starts_on, is_current) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO semesters (name, academic_year, term_index, starts_on, ends_on, is_current) VALUES (?, ?, ?, ?, ?, ?)',
       [
         semester.name,
         semester.academicYear,
         semester.termIndex,
         semester.startsOn.toIso8601String(),
+        semester.endsOn.toIso8601String(),
         semester.isCurrent ? 1 : 0,
       ],
     );
@@ -168,7 +194,7 @@ class SeekuDatabase extends GeneratedDatabase {
     await customStatement(
       '''
       UPDATE semesters
-      SET name = ?, academic_year = ?, term_index = ?, starts_on = ?, is_current = ?
+      SET name = ?, academic_year = ?, term_index = ?, starts_on = ?, ends_on = ?, is_current = ?
       WHERE id = ?
       ''',
       [
@@ -176,6 +202,7 @@ class SeekuDatabase extends GeneratedDatabase {
         semester.academicYear,
         semester.termIndex,
         semester.startsOn.toIso8601String(),
+        semester.endsOn.toIso8601String(),
         semester.isCurrent ? 1 : 0,
         semester.id,
       ],
@@ -188,6 +215,31 @@ class SeekuDatabase extends GeneratedDatabase {
     await customStatement('UPDATE semesters SET is_current = 1 WHERE id = ?', [
       semesterId,
     ]);
+  }
+
+  Future<void> deleteSemester(int semesterId) async {
+    await ensureInitialized();
+    await transaction(() async {
+      final rows = await customSelect(
+        'SELECT is_current FROM semesters WHERE id = ? LIMIT 1',
+        variables: [Variable<int>(semesterId)],
+      ).get();
+      final wasCurrent =
+          rows.isNotEmpty && rows.first.read<int>('is_current') == 1;
+      await customStatement('DELETE FROM semesters WHERE id = ?', [semesterId]);
+      if (!wasCurrent) {
+        return;
+      }
+      final replacement = await customSelect(
+        'SELECT id FROM semesters ORDER BY starts_on DESC, id DESC LIMIT 1',
+      ).get();
+      if (replacement.isNotEmpty) {
+        await customStatement(
+          'UPDATE semesters SET is_current = 1 WHERE id = ?',
+          [replacement.first.read<int>('id')],
+        );
+      }
+    });
   }
 
   Future<List<TimeSlot>> getTimeSlots() async {
@@ -207,6 +259,7 @@ class SeekuDatabase extends GeneratedDatabase {
       ON CONFLICT(id) DO UPDATE SET
         section = excluded.section,
         start_time = excluded.start_time,
+        end_time = excluded.end_time,
         profile_name = excluded.profile_name
       ''',
       [slot.id, slot.section, slot.startTime, slot.endTime, slot.profileName],
@@ -410,6 +463,7 @@ class SeekuDatabase extends GeneratedDatabase {
       academicYear: row.read<String>('academic_year'),
       termIndex: row.read<int>('term_index'),
       startsOn: DateTime.parse(row.read<String>('starts_on')),
+      endsOn: DateTime.parse(row.read<String>('ends_on')),
       isCurrent: row.read<int>('is_current') == 1,
     );
   }

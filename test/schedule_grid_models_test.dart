@@ -11,6 +11,7 @@ void main() {
       academicYear: '2025-2026',
       termIndex: 2,
       startsOn: DateTime(2026, 7, 6),
+      endsOn: DateTime(2026, 7, 12),
       isCurrent: true,
     );
     const entry = CourseEntry(
@@ -46,5 +47,55 @@ void main() {
     final tuesday = grid.dayForWeekday(2);
     expect(tuesday.blocks, isEmpty);
     expect(tuesday.currentTimeFraction, isNull);
+  });
+
+  test('ScheduleGridBuilder supports off-week entries and section count', () {
+    final semester = Semester(
+      id: 1,
+      name: '测试学期',
+      academicYear: '2025-2026',
+      termIndex: 2,
+      startsOn: DateTime(2026, 7, 6),
+      endsOn: DateTime(2026, 7, 12),
+      isCurrent: true,
+    );
+    const offWeekEntry = CourseEntry(
+      course: Course(id: 1, semesterId: 1, name: '数据库系统', source: 'manual'),
+      occurrence: CourseOccurrence(
+        id: 1,
+        courseId: 1,
+        weekday: 1,
+        startSection: 3,
+        endSection: 4,
+        weekExpression: '[2周]',
+        parsedWeeks: [2],
+      ),
+    );
+
+    final hiddenGrid = ScheduleGridBuilder.build(
+      entries: const [offWeekEntry],
+      timeSlots: defaultCquTimeSlots,
+      semester: semester,
+      selectedWeek: 1,
+      openedAt: DateTime(2026, 7, 6, 10),
+      sectionCount: 8,
+    );
+    expect(hiddenGrid.sectionCount, 8);
+    expect(hiddenGrid.dayForWeekday(1).slots, hasLength(8));
+    expect(hiddenGrid.dayForWeekday(1).blocks, isEmpty);
+
+    final visibleGrid = ScheduleGridBuilder.build(
+      entries: const [offWeekEntry],
+      timeSlots: defaultCquTimeSlots,
+      semester: semester,
+      selectedWeek: 1,
+      openedAt: DateTime(2026, 7, 6, 10),
+      sectionCount: 8,
+      includeOffWeekEntries: true,
+    );
+    expect(
+      visibleGrid.dayForWeekday(1).blocks.single.isInSelectedWeek,
+      isFalse,
+    );
   });
 }

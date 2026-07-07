@@ -48,6 +48,40 @@ void main() {
       final slots = await repository.getTimeSlots();
       expect(slots.first.startTime, '08:10');
 
+      final nextSemesterId = await repository.createSemester(
+        Semester(
+          id: 0,
+          name: '2026-2027 第一学期',
+          academicYear: '2026-2027',
+          termIndex: 1,
+          startsOn: DateTime(2026, 9, 1),
+          endsOn: DateTime(2027, 1, 18),
+          isCurrent: true,
+        ),
+      );
+      await repository.addCourse(
+        CourseDraft(
+          semesterId: nextSemesterId,
+          name: '操作系统',
+          weekday: 1,
+          startSection: 1,
+          endSection: 2,
+          weekExpression: '[1-16周]',
+          parsedWeeks: List<int>.generate(16, (index) => index + 1),
+          source: 'manual',
+        ),
+      );
+      await repository.deleteSemester(nextSemesterId);
+      final remainingSemesters = await repository.getSemesters();
+      expect(
+        remainingSemesters.any((item) => item.id == nextSemesterId),
+        isFalse,
+      );
+      expect(await repository.getEntriesForSemester(nextSemesterId), isEmpty);
+      expect(
+        (await repository.getCurrentSemester())?.id,
+        isNot(nextSemesterId),
+      );
       final batchId = await database.insertImportBatch(
         sourceType: 'excel',
         importedAt: DateTime(2026, 7, 1),
