@@ -7,8 +7,8 @@
 普通用户推荐从 GitHub Releases 下载 Windows 安装包：
 
 - 下载页面：[SeekU Releases](https://github.com/Tokiperson/seeku/releases)
-- 当前推荐版本：`v0.1.0-rc.2`
-- 安装包命名：`SeekU-v0.1.0-rc.2-setup.exe`
+- 当前推荐版本：`v0.1.1-snapshot`
+- 安装包命名：`SeekU-v0.1.1-snapshot-setup.exe`
 
 如果 Releases 中暂未看到目标安装包，说明该版本安装包可能仍在发布准备中；开发者可参考 README 从源码运行或构建。
 
@@ -20,11 +20,12 @@
 - Excel / CSV / PDF / 图片导入解析错误。
 - AI 识别结果结构不正确。
 - 设置、学期管理或课程编辑行为不符合预期。
+- CQU-Openlib 资源匹配缺失、误匹配或链接无法打开。
 - Windows 桌面端窗口、托盘或构建问题。
 
 提交问题时，请尽量说明：
 
-- 使用的 SeekU 版本，例如 `v0.1.0-rc.2`。
+- 使用的 SeekU 版本，例如 `v0.1.1-snapshot`。
 - 操作系统和 Flutter 运行环境。
 - 触发问题的操作步骤。
 - 期望结果与实际结果。
@@ -50,3 +51,5 @@
 - 开源协议：Apache License 2.0
 
 SeekU 仍在快速迭代中，清晰、可复现、脱敏充分的反馈会非常有帮助。
+
+

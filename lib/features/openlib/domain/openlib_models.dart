@@ -41,6 +41,18 @@ class LearningResource {
   final String source;
 }
 
+class OpenlibResourceCache {
+  const OpenlibResourceCache({
+    required this.queryKey,
+    required this.cachedAt,
+    required this.payload,
+  });
+
+  final String queryKey;
+  final DateTime cachedAt;
+  final String payload;
+}
+
 abstract class OpenlibResourceProvider {
   const OpenlibResourceProvider();
 

@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../features/import/domain/import_models.dart';
+import '../../features/openlib/domain/openlib_models.dart';
 import '../../features/schedule/domain/schedule_models.dart';
 
 class SeekuDatabase extends GeneratedDatabase {
@@ -92,6 +93,13 @@ class SeekuDatabase extends GeneratedDatabase {
         imported_at TEXT NOT NULL,
         raw_snapshot_path TEXT,
         status TEXT NOT NULL
+      )
+    ''');
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS openlib_resource_cache (
+        query_key TEXT PRIMARY KEY,
+        cached_at TEXT NOT NULL,
+        payload TEXT NOT NULL
       )
     ''');
     await _migrateSemesterEndsOn();
@@ -449,6 +457,38 @@ class SeekuDatabase extends GeneratedDatabase {
     return rows.map(_importBatchFromRow).toList();
   }
 
+  Future<OpenlibResourceCache?> getOpenlibResourceCache(String queryKey) async {
+    await ensureInitialized();
+    final rows = await customSelect(
+      '''
+      SELECT query_key, cached_at, payload
+      FROM openlib_resource_cache
+      WHERE query_key = ?
+      LIMIT 1
+      ''',
+      variables: [Variable<String>(queryKey)],
+    ).get();
+    if (rows.isEmpty) {
+      return null;
+    }
+    return _openlibCacheFromRow(rows.first);
+  }
+
+  Future<void> upsertOpenlibResourceCache({
+    required String queryKey,
+    required DateTime cachedAt,
+    required String payload,
+  }) async {
+    await ensureInitialized();
+    await customStatement(
+      '''
+      INSERT OR REPLACE INTO openlib_resource_cache (query_key, cached_at, payload)
+      VALUES (?, ?, ?)
+      ''',
+      [queryKey, cachedAt.toIso8601String(), payload],
+    );
+  }
+
   Future<int> _lastInsertId() async {
     final row = await customSelect(
       'SELECT last_insert_rowid() AS id',
@@ -510,6 +550,14 @@ class SeekuDatabase extends GeneratedDatabase {
       importedAt: DateTime.parse(row.read<String>('imported_at')),
       rawSnapshotPath: row.readNullable<String>('raw_snapshot_path'),
       status: row.read<String>('status'),
+    );
+  }
+
+  OpenlibResourceCache _openlibCacheFromRow(QueryRow row) {
+    return OpenlibResourceCache(
+      queryKey: row.read<String>('query_key'),
+      cachedAt: DateTime.parse(row.read<String>('cached_at')),
+      payload: row.read<String>('payload'),
     );
   }
 

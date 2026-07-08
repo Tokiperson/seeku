@@ -5,6 +5,8 @@ import '../../features/ai/data/ai_core_service.dart';
 import '../../features/ai/domain/ai_core_models.dart';
 import '../../features/import/data/import_repository.dart';
 import '../../features/import/domain/import_models.dart';
+import '../../features/openlib/data/cqu_openlib_resource_provider.dart';
+import '../../features/openlib/domain/openlib_models.dart';
 import '../../features/schedule/data/schedule_repository.dart';
 import '../../features/schedule/domain/schedule_models.dart';
 import '../database/seeku_database.dart';
@@ -63,6 +65,15 @@ final currentSemesterEntriesProvider = FutureProvider<List<CourseEntry>>((
       .getEntriesForSemester(semester.id);
 });
 
+final openlibResourceProvider = Provider<OpenlibResourceProvider>((ref) {
+  return CquOpenlibResourceProvider(database: ref.watch(databaseProvider));
+});
+
+final courseOpenlibResourcesProvider =
+    FutureProvider.family<List<LearningResource>, Course>((ref, course) {
+      final query = ResourceSearchQuery.fromCourse(course);
+      return ref.watch(openlibResourceProvider).search(query);
+    });
 final importBatchesProvider = FutureProvider<List<ImportBatch>>((ref) {
   return ref.watch(importRepositoryProvider).getImportBatches();
 });

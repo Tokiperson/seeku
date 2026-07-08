@@ -1,4 +1,5 @@
 import '../../features/import/domain/import_models.dart';
+import '../../features/openlib/domain/openlib_models.dart';
 import '../../features/schedule/domain/schedule_models.dart';
 
 class SeekuDatabase {
@@ -17,6 +18,7 @@ class SeekuDatabase {
   final List<TimeSlot> _timeSlots = [];
   final List<CourseEntry> _entries = [];
   final List<ImportBatch> _batches = [];
+  final Map<String, OpenlibResourceCache> _openlibCache = {};
 
   Future<void> close() async {}
 
@@ -241,6 +243,22 @@ class SeekuDatabase {
 
   Future<List<ImportBatch>> getImportBatches() async {
     return List.unmodifiable(_batches);
+  }
+
+  Future<OpenlibResourceCache?> getOpenlibResourceCache(String queryKey) async {
+    return _openlibCache[queryKey];
+  }
+
+  Future<void> upsertOpenlibResourceCache({
+    required String queryKey,
+    required DateTime cachedAt,
+    required String payload,
+  }) async {
+    _openlibCache[queryKey] = OpenlibResourceCache(
+      queryKey: queryKey,
+      cachedAt: cachedAt,
+      payload: payload,
+    );
   }
 
   Future<void> _seedPreviewCourses(int semesterId) async {
