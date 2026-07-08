@@ -2,6 +2,16 @@
 
 感谢你关注 SeekU。SeekU 是一个面向重庆大学学生课表场景的开源项目，欢迎反馈问题、建议功能或参与贡献。
 
+## 下载软件
+
+普通用户推荐从 GitHub Releases 下载 Windows 安装包：
+
+- 下载页面：[SeekU Releases](https://github.com/Tokiperson/seeku/releases)
+- 当前推荐版本：`v0.1.0-rc.2`
+- 安装包命名：`SeekU-v0.1.0-rc.2-setup.exe`
+
+如果 Releases 中暂未看到目标安装包，说明该版本安装包可能仍在发布准备中；开发者可参考 README 从源码运行或构建。
+
 ## 反馈问题
 
 如果你遇到以下情况，建议通过项目仓库提交 Issue：
@@ -14,7 +24,7 @@
 
 提交问题时，请尽量说明：
 
-- 使用的 SeekU 版本。
+- 使用的 SeekU 版本，例如 `v0.1.0-rc.2`。
 - 操作系统和 Flutter 运行环境。
 - 触发问题的操作步骤。
 - 期望结果与实际结果。
