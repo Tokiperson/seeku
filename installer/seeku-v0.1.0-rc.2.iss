@@ -1,12 +1,15 @@
 #define MyAppName "SeekU"
 #define MyAppVersion "0.1.0-rc.2"
 #define MyAppExeName "seeku.exe"
+#define MyAppPublisher "Tokiperson"
+#define MyAppSourceDir "..\build\windows\x64\runner\Release"
 
 [Setup]
 AppId={{7D2E8F74-F41F-4F22-9E84-5E0C00000001}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-AppPublisher=Tokiperson
+AppVerName={#MyAppName} v{#MyAppVersion}
+AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\SeekU
 DefaultGroupName=SeekU
 OutputDir=..\dist\inno
@@ -24,7 +27,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: "附加任务："; Flags: unchecked
 
 [Files]
-Source: "..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#MyAppSourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\SeekU"; Filename: "{app}\{#MyAppExeName}"

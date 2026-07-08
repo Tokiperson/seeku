@@ -39,8 +39,8 @@ class SettingsRepository {
 
   double get fontScale {
     return switch (fontSizeName) {
-      'small' => 0.92,
-      'large' => 1.12,
+      'small' => 0.84,
+      'large' => 1.24,
       _ => 1.0,
     };
   }

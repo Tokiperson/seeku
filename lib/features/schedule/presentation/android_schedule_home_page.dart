@@ -6,6 +6,7 @@ import '../../../app/theme.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../ai/presentation/ai_core_status_button.dart';
 import '../domain/schedule_grid_models.dart';
+import '../domain/schedule_models.dart';
 import 'schedule_grid_view.dart';
 
 class AndroidScheduleHomePage extends ConsumerStatefulWidget {
@@ -39,17 +40,27 @@ class _AndroidScheduleHomePageState
   }
 }
 
-class _AndroidScheduleContent extends ConsumerWidget {
+class _AndroidScheduleContent extends ConsumerStatefulWidget {
   const _AndroidScheduleContent({required this.openedAt});
 
   final DateTime openedAt;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AndroidScheduleContent> createState() =>
+      _AndroidScheduleContentState();
+}
+
+class _AndroidScheduleContentState
+    extends ConsumerState<_AndroidScheduleContent> {
+  int? _positionedSemesterId;
+
+  @override
+  Widget build(BuildContext context) {
     final mode = ref.watch(scheduleViewModeProvider);
     final selectedWeekday = ref.watch(selectedWeekdayProvider);
     final entriesAsync = ref.watch(currentSemesterEntriesProvider);
     final semesterAsync = ref.watch(currentSemesterProvider);
+    _positionToCurrentWeek(semesterAsync);
     final timeSlotsAsync = ref.watch(timeSlotsProvider);
     final selectedWeek = ref.watch(selectedWeekProvider);
     final settingsAsync = ref.watch(settingsRepositoryProvider);
@@ -82,8 +93,8 @@ class _AndroidScheduleContent extends ConsumerWidget {
                   const SizedBox(width: 16),
                   Expanded(
                     child: _TopPill(
-                      title: _greeting(),
-                      subtitle: _todayText(openedAt),
+                      title: _greeting(widget.openedAt),
+                      subtitle: _todayText(widget.openedAt),
                       alignEnd: true,
                     ),
                   ),
@@ -112,7 +123,7 @@ class _AndroidScheduleContent extends ConsumerWidget {
                           timeSlots: timeSlots,
                           semester: semester,
                           selectedWeek: selectedWeek,
-                          openedAt: openedAt,
+                          openedAt: widget.openedAt,
                           sectionCount: sectionCount,
                           includeOffWeekEntries: showOffWeekCourses,
                         );
@@ -200,7 +211,7 @@ class _AndroidScheduleContent extends ConsumerWidget {
     );
   }
 
-  String _greeting() {
+  String _greeting(DateTime openedAt) {
     final hour = openedAt.hour;
     if (hour < 12) {
       return '早上好';
@@ -214,6 +225,32 @@ class _AndroidScheduleContent extends ConsumerWidget {
   String _todayText(DateTime date) {
     final weekday = scheduleWeekdayNames[date.weekday - 1];
     return '$weekday，${date.year}/${date.month}/${date.day}';
+  }
+
+  void _positionToCurrentWeek(AsyncValue<Semester?> semesterAsync) {
+    final semester = switch (semesterAsync) {
+      AsyncData(:final value) => value,
+      _ => null,
+    };
+    if (semester == null || _positionedSemesterId == semester.id) {
+      return;
+    }
+    _positionedSemesterId = semester.id;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final currentWeek = ref
+          .read(scheduleRepositoryProvider)
+          .currentWeekForSemester(semester, now: widget.openedAt);
+      ref.read(selectedWeekProvider.notifier).setWeek(currentWeek);
+      ref
+          .read(selectedWeekdayProvider.notifier)
+          .setWeekday(widget.openedAt.weekday);
+      ref
+          .read(scheduleViewModeProvider.notifier)
+          .setMode(ScheduleViewMode.week);
+    });
   }
 }
 

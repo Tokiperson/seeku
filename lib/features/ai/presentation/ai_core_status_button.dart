@@ -14,6 +14,7 @@ class AiCoreStatusButton extends ConsumerStatefulWidget {
 }
 
 class _AiCoreStatusButtonState extends ConsumerState<AiCoreStatusButton> {
+  static bool _startupDialogShown = false;
   bool _startupChecked = false;
 
   @override
@@ -81,6 +82,10 @@ class _AiCoreStatusButtonState extends ConsumerState<AiCoreStatusButton> {
       _showStatusSnack(snapshot.message);
       return;
     }
+    if (_startupDialogShown) {
+      return;
+    }
+    _startupDialogShown = true;
     await _showConfigurationDialog(snapshot);
   }
 
@@ -105,7 +110,7 @@ class _AiCoreStatusButtonState extends ConsumerState<AiCoreStatusButton> {
         : '配置 AI API Key';
     final content = snapshot.status == AiCoreStatus.trialExpired
         ? 'AI核心已断开。内置 API Key 试用已满 5 天，请配置自己的 API Key 后继续使用 AI 功能。'
-        : '尚未配置 AI API Key。你可以前往设置填写自己的 Key；暂不配置时，可免费使用内置 API Key ${snapshot.trialRemainingDays} 天。未配置状态会在每次启动时提醒。';
+        : '尚未配置 AI API Key。你可以前往设置填写自己的 Key；暂不配置时，可免费使用内置 API Key ${snapshot.trialRemainingDays} 天。每次启动仅提醒一次。';
     final action = await showDialog<_AiStartupAction>(
       context: context,
       builder: (context) => AlertDialog(

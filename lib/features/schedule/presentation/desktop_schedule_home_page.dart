@@ -41,17 +41,27 @@ class _DesktopScheduleHomePageState
   }
 }
 
-class _DesktopScheduleContent extends ConsumerWidget {
+class _DesktopScheduleContent extends ConsumerStatefulWidget {
   const _DesktopScheduleContent({required this.openedAt});
 
   final DateTime openedAt;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DesktopScheduleContent> createState() =>
+      _DesktopScheduleContentState();
+}
+
+class _DesktopScheduleContentState
+    extends ConsumerState<_DesktopScheduleContent> {
+  int? _positionedSemesterId;
+
+  @override
+  Widget build(BuildContext context) {
     final mode = ref.watch(scheduleViewModeProvider);
     final selectedWeekday = ref.watch(selectedWeekdayProvider);
     final entriesAsync = ref.watch(currentSemesterEntriesProvider);
     final semesterAsync = ref.watch(currentSemesterProvider);
+    _positionToCurrentWeek(semesterAsync);
     final timeSlotsAsync = ref.watch(timeSlotsProvider);
     final selectedWeek = ref.watch(selectedWeekProvider);
     final settingsAsync = ref.watch(settingsRepositoryProvider);
@@ -131,7 +141,7 @@ class _DesktopScheduleContent extends ConsumerWidget {
                                     timeSlots: timeSlots,
                                     semester: semester,
                                     selectedWeek: selectedWeek,
-                                    openedAt: openedAt,
+                                    openedAt: widget.openedAt,
                                     sectionCount: sectionCount,
                                     includeOffWeekEntries: showOffWeekCourses,
                                   );
@@ -202,6 +212,32 @@ class _DesktopScheduleContent extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  void _positionToCurrentWeek(AsyncValue<Semester?> semesterAsync) {
+    final semester = switch (semesterAsync) {
+      AsyncData(:final value) => value,
+      _ => null,
+    };
+    if (semester == null || _positionedSemesterId == semester.id) {
+      return;
+    }
+    _positionedSemesterId = semester.id;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final currentWeek = ref
+          .read(scheduleRepositoryProvider)
+          .currentWeekForSemester(semester, now: widget.openedAt);
+      ref.read(selectedWeekProvider.notifier).setWeek(currentWeek);
+      ref
+          .read(selectedWeekdayProvider.notifier)
+          .setWeekday(widget.openedAt.weekday);
+      ref
+          .read(scheduleViewModeProvider.notifier)
+          .setMode(ScheduleViewMode.week);
+    });
   }
 }
 
