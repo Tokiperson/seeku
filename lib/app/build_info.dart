@@ -1,7 +1,7 @@
 class SeekUBuildInfo {
   const SeekUBuildInfo._();
 
-  static const version = 'v0.1.1-snapshot';
+  static const version = 'v0.1.1';
   static const gitHash = String.fromEnvironment(
     'SEEKU_GIT_HASH',
     defaultValue: '58a7cc5',
@@ -9,4 +9,3 @@ class SeekUBuildInfo {
 
   static const displayVersion = '$version/$gitHash';
 }
-

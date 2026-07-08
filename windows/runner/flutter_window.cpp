@@ -1,11 +1,14 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <utility>
 
 #include "flutter/generated_plugin_registrant.h"
 
-FlutterWindow::FlutterWindow(const flutter::DartProject& project)
-    : project_(project) {}
+FlutterWindow::FlutterWindow(const flutter::DartProject& project,
+                             std::function<void()> first_frame_callback)
+    : project_(project),
+      first_frame_callback_(std::move(first_frame_callback)) {}
 
 FlutterWindow::~FlutterWindow() {}
 
@@ -27,8 +30,11 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
-  flutter_controller_->engine()->SetNextFrameCallback([&]() {
+  flutter_controller_->engine()->SetNextFrameCallback([this]() {
     this->Show();
+    if (first_frame_callback_) {
+      first_frame_callback_();
+    }
   });
 
   // Flutter can complete the first frame before the "show window" callback is

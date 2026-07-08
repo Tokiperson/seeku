@@ -2,8 +2,30 @@
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
 
+#include <string>
+
 #include "flutter_window.h"
+#include "splash_window.h"
 #include "utils.h"
+
+namespace {
+
+std::wstring GetExecutableDirectory() {
+  wchar_t buffer[MAX_PATH];
+  const DWORD length = GetModuleFileName(nullptr, buffer, MAX_PATH);
+  if (length == 0 || length == MAX_PATH) {
+    return L".";
+  }
+
+  std::wstring path(buffer, length);
+  const size_t separator = path.find_last_of(L"\\/");
+  if (separator == std::wstring::npos) {
+    return L".";
+  }
+  return path.substr(0, separator);
+}
+
+}  // namespace
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
@@ -17,6 +39,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // plugins.
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
+  SplashWindow splash_window;
+  const std::wstring splash_video_path =
+      GetExecutableDirectory() + L"\\data\\seeku_splash_animation.mp4";
+  splash_window.CreateAndShow(splash_video_path);
+
   flutter::DartProject project(L"data");
 
   std::vector<std::string> command_line_arguments =
@@ -24,7 +51,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
-  FlutterWindow window(project);
+  FlutterWindow window(project, [&splash_window]() { splash_window.Close(); });
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
   if (!window.Create(L"seeku", origin, size)) {
