@@ -163,6 +163,3 @@
 **请在使用 SeekU 前仔细阅读本协议。点击"同意"或继续使用本软件即表示您已充分理解并同意本协议的全部内容。**
 
 &copy; 2026 SeekU Developers. Licensed under Apache License 2.0.
-
-
-
